@@ -27,18 +27,6 @@ export function getTableMapStatus(
   return "free"
 }
 
-export function tableMapStatusClass(status: TableMapStatus): string {
-  switch (status) {
-    case "occupied":
-      return "border-orange-600/55 bg-orange-500/15 text-foreground"
-    case "reserved":
-      return "border-sky-600/55 bg-sky-500/15 text-foreground"
-    case "free":
-    default:
-      return "border-emerald-600/45 bg-emerald-500/12 text-foreground"
-  }
-}
-
 export function tableMapStatusLabel(status: TableMapStatus): string {
   switch (status) {
     case "occupied":

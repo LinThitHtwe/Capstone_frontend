@@ -25,10 +25,14 @@ import {
 import { mockReservations } from "@/lib/data/admin-mock"
 import { getDemoStudentReservationsSorted } from "@/lib/data/demo-user-reservations"
 import {
-  getTableMapStatus,
-  tableMapStatusClass,
-  tableMapStatusLabel,
-} from "@/lib/table-map-status"
+  LibraryMapLegendPillFree,
+  LibraryMapLegendPillOccupied,
+  LibraryMapLegendPillReserved,
+  LibraryMapTableTileFree,
+  LibraryMapTableTileOccupied,
+  LibraryMapTableTileReserved,
+} from "@/components/library/library-map-table-by-status"
+import { getTableMapStatus, tableMapStatusLabel } from "@/lib/table-map-status"
 import { cn } from "@/lib/utils"
 
 const reservationFormatter = new Intl.DateTimeFormat(undefined, {
@@ -38,18 +42,6 @@ const reservationFormatter = new Intl.DateTimeFormat(undefined, {
 
 function formatReservationRange(start: string, end: string) {
   return `${reservationFormatter.format(new Date(start))} → ${reservationFormatter.format(new Date(end))}`
-}
-
-function tableTypeIcon(type: string) {
-  switch (type) {
-    case "CIRCULAR":
-      return Circle
-    case "FOUR_SEATS":
-      return Users
-    case "SINGLE":
-    default:
-      return Square
-  }
 }
 
 /** Seats counted per table type for “free seats” totals (library layout). */
@@ -190,7 +182,7 @@ export function PublicLibraryMap() {
                     <div
                       className={cn(
                         "w-1 shrink-0 sm:w-1.5",
-                        freeSeatCount > 0 ? "bg-emerald-500" : "bg-muted-foreground/25"
+                        freeSeatCount > 0 ? "bg-green-500" : "bg-muted-foreground/25"
                       )}
                       aria-hidden
                     />
@@ -205,7 +197,7 @@ export function PublicLibraryMap() {
                               className={cn(
                                 "text-5xl font-bold tabular-nums tracking-tight sm:text-6xl",
                                 freeSeatCount > 0
-                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  ? "text-green-700 dark:text-green-400"
                                   : "text-muted-foreground"
                               )}
                             >
@@ -291,28 +283,10 @@ export function PublicLibraryMap() {
                     Map colours
                   </span>
                   <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs sm:text-sm">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-background/80 px-2 py-0.5 ring-1 ring-border/50">
-                      <span
-                        className="size-2 shrink-0 rounded-sm bg-emerald-500/90 ring-1 ring-emerald-600/35"
-                        aria-hidden
-                      />
-                      Free
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-background/80 px-2 py-0.5 ring-1 ring-border/50">
-                      <span
-                        className="size-2 shrink-0 rounded-sm bg-sky-500/85 ring-1 ring-sky-600/40"
-                        aria-hidden
-                      />
-                      Reserved
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-background/80 px-2 py-0.5 ring-1 ring-border/50">
-                      <span
-                        className="size-2 shrink-0 rounded-sm bg-orange-500/85 ring-1 ring-orange-600/40"
-                        aria-hidden
-                      />
-                      Occupied
-                    </span>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                    <LibraryMapLegendPillFree />
+                    <LibraryMapLegendPillReserved />
+                    <LibraryMapLegendPillOccupied />
                   </div>
                 </div>
 
@@ -325,44 +299,36 @@ export function PublicLibraryMap() {
                 aria-label={`Library map floor ${floor}`}
               >
                 {visibleTables.map((t) => {
-                  const TypeIcon = tableTypeIcon(t.tableType)
                   const status = getTableMapStatus(t, mockReservations, now)
                   const mapW = libraryMapSize.w
                   const mapH = libraryMapSize.h
-                  return (
-                    <div
-                      key={t.id}
-                      className={cn(
-                        "absolute select-none rounded-lg border-2 px-1.5 py-1 shadow-sm",
-                        tableMapStatusClass(status)
-                      )}
-                      style={{
-                        left: `${(t.positionX / mapW) * 100}%`,
-                        top: `${(t.positionY / mapH) * 100}%`,
-                        width: `${(libraryTileSize.w / mapW) * 100}%`,
-                        height: `${(libraryTileSize.h / mapH) * 100}%`,
-                      }}
-                      title={`${tableMapStatusLabel(status)} · ${tableTypeLabel(t.tableType)}`}
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-mono text-[11px] leading-none text-muted-foreground">
-                          #{t.tableNumber}
-                        </span>
-                        <TypeIcon
-                          className="size-3.5 shrink-0 text-muted-foreground/80"
-                          aria-hidden
-                        />
-                      </div>
-                      <div
-                        className={cn(
-                          "mt-0.5 truncate text-[11px] font-medium leading-tight",
-                          t.tableType === "SINGLE" && "text-muted-foreground"
-                        )}
-                      >
-                        {tableTypeLabel(t.tableType)}
-                      </div>
-                    </div>
-                  )
+                  const positionStyle: React.CSSProperties = {
+                    left: `${(t.positionX / mapW) * 100}%`,
+                    top: `${(t.positionY / mapH) * 100}%`,
+                    width: `${(libraryTileSize.w / mapW) * 100}%`,
+                    height: `${(libraryTileSize.h / mapH) * 100}%`,
+                  }
+                  const tileProps = {
+                    tableNumber: t.tableNumber,
+                    tableType: t.tableType,
+                    typeLabel: tableTypeLabel(t.tableType),
+                    positionStyle,
+                    title: `${tableMapStatusLabel(status)} · ${tableTypeLabel(t.tableType)}`,
+                  }
+                  switch (status) {
+                    case "free":
+                      return (
+                        <LibraryMapTableTileFree key={t.id} {...tileProps} />
+                      )
+                    case "reserved":
+                      return (
+                        <LibraryMapTableTileReserved key={t.id} {...tileProps} />
+                      )
+                    case "occupied":
+                      return (
+                        <LibraryMapTableTileOccupied key={t.id} {...tileProps} />
+                      )
+                  }
                 })}
               </div>
             </CardContent>
