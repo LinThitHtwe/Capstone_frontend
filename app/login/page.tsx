@@ -1,65 +1,115 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import * as React from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const router = useRouter;
+  const router = useRouter()
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [error, setError] = React.useState("")
 
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
 
-        // Temporary database check
-        if (email === "test@mail.com" && password === "password123"){
-            alert("Login Successful! (Demo Mode)")
-        }
-        else{
-            setError("Invalid email or password")
-        }
-    };
+    if (email === "test@mail.com" && password === "password123") {
+      router.push("/")
+      return
+    }
+    setError("Invalid email or password")
+  }
 
-    return (
-        <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
-            <div className = "w-full max-w-md bg-white p-8 rounded-lg shadow-md">
-                
-                <h1 className="text-3xl font-semibold text-center mb-10 text-gray-800">
-                    Login
-                </h1>
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-8">
+        <div className="mx-auto flex max-w-lg items-center justify-between">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/">← Library map</Link>
+          </Button>
+        </div>
+      </header>
 
-                <form onSubmit={handleLogin} className='space-y-6'>
-                    {error && <p className='text-red-500 text-sm text-center bg-red-100 p-2 rounded'>{error}</p>}
+      <main className="mx-auto flex min-h-[calc(100vh-4.5rem)] max-w-lg flex-col justify-center px-4 py-10 md:px-8">
+        <Card className="shadow-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl tracking-tight">Log in</CardTitle>
+            <CardDescription>
+              Demo: <span className="font-mono text-xs">test@mail.com</span> /{" "}
+              <span className="font-mono text-xs">password123</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              {error ? (
+                <div
+                  role="alert"
+                  className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {error}
+                </div>
+              ) : null}
 
-                    <input
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        required
-                    />
+              <div className="space-y-2">
+                <Label htmlFor="login-email">Email</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-                    <input
-                        type="password"
-                        placeholder='Password'
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                    />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <span className="text-xs text-muted-foreground">
+                    Demo only
+                  </span>
+                </div>
+                <Input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300"
-                    >
-                        Log In
-                    </button>
-                </form>
-            </div>
-        </main>
-    )
+              <Button type="submit" className="w-full">
+                Log in
+              </Button>
+            </form>
 
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              No account?{" "}
+              <Link
+                href="/signup"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Sign up
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  )
 }

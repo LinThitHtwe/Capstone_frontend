@@ -1,99 +1,136 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
+import * as React from "react"
+import Link from "next/link"
+
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 export default function SignUpPage() {
-  // Store user input
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [confirmPassword, setConfirmPassword] = React.useState("")
+  const [error, setError] = React.useState("")
+  const [submitted, setSubmitted] = React.useState(false)
 
-  // Submit function (triggered by button)
   const handleSignUp = (e: React.FormEvent) => {
-    e.preventDefault(); // Prevents the page from refreshing
-    setError(''); // Clear old errors
+    e.preventDefault()
+    setError("")
+    setSubmitted(false)
 
     if (password !== confirmPassword) {
-        setError("Passwords do not match!")
-        return;
+      setError("Passwords do not match.")
+      return
     }
-    
-    console.log("Form Submitted to the browser console!", {
-        email,
-        password,
-    });
-    alert("Check the browser colsle (Press F12) to see your sign up data!")
-  };
 
-  // The UI
+    setSubmitted(true)
+  }
+
   return (
-    // The main background, centered everything (like your graph paper drawing)
-    <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
-      
-      {/* 1. The Container Box */}
-      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
-        
-        {/* 2. The Title */}
-        <h1 className="text-3xl font-semibold text-center mb-10 text-gray-800">
-          Create Account
-        </h1>
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-8">
+        <div className="mx-auto flex max-w-lg items-center justify-between">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/">← Library map</Link>
+          </Button>
+        </div>
+      </header>
 
-        {/* 3. The Form */}
-        <form onSubmit={handleSignUp} className="space-y-6">
-          
-          {/* Emergency Error Message */}
-          {error && <p className="text-red-500 text-sm text-center font-medium bg-red-100 p-2 rounded">{error}</p>}
+      <main className="mx-auto flex min-h-[calc(100vh-4.5rem)] max-w-lg flex-col justify-center px-4 py-10 md:px-8">
+        <Card className="shadow-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl tracking-tight">
+              Create account
+            </CardTitle>
+            <CardDescription>
+              Sign up for library access. This form is a UI demo only.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSignUp} className="space-y-4">
+              {error ? (
+                <div
+                  role="alert"
+                  className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {error}
+                </div>
+              ) : null}
 
-          {/* Email Input Field */}
-          <div>
-            <input 
-              type="email" 
-              placeholder="Email"
-              value={email}
-              // This is the core React part: updating state on every keystroke
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              required
-            />
-          </div>
+              {submitted && !error ? (
+                <div
+                  role="status"
+                  className="rounded-lg border border-green-600/30 bg-green-500/10 px-3 py-2 text-sm text-green-800 dark:border-green-500/35 dark:bg-green-500/15 dark:text-green-200"
+                >
+                  Details captured (demo). Backend registration is not wired
+                  yet.
+                </div>
+              ) : null}
 
-          {/* Create Password Input Field */}
-          <div>
-            <input 
-              type="password" 
-              placeholder="Create password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              required
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-          {/* Confirm Password Input Field */}
-          <div>
-            <input 
-              type="password" 
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              required
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-          {/* 4. The Sign UP Button */}
-          <div className="pt-2">
-            <button 
-              type="submit" 
-              className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300"
-            >
-              Sign Up
-            </button>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-confirm">Confirm password</Label>
+                <Input
+                  id="signup-confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Repeat password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-        </form>
-      </div>
-    </main>
-  );
+              <Button type="submit" className="w-full">
+                Sign up
+              </Button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Log in
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  )
 }
