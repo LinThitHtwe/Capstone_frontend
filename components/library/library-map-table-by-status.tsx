@@ -12,6 +12,8 @@ export type LibraryMapTableTileProps = {
   typeLabel: string
   positionStyle: React.CSSProperties
   title: string
+  /** When set, tile is a button (only used for free tables). */
+  onActivate?: () => void
 }
 
 function tableTypeIcon(type: string) {
@@ -70,22 +72,42 @@ export function LibraryMapTableTileFree({
   typeLabel,
   positionStyle,
   title,
+  onActivate,
 }: LibraryMapTableTileProps) {
+  const shellClass = cn(
+    TILE_SHELL,
+    "border-green-300 bg-green-100 dark:border-green-700 dark:bg-green-950/45",
+    onActivate &&
+      "cursor-pointer transition hover:brightness-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:brightness-[0.94]"
+  )
+
+  const inner = (
+    <LibraryMapTableTileContent
+      tableNumber={tableNumber}
+      tableType={tableType}
+      typeLabel={typeLabel}
+      subtextClassName="text-green-900/85 dark:text-green-50/90"
+    />
+  )
+
+  if (onActivate) {
+    return (
+      <button
+        type="button"
+        className={cn(shellClass, "text-left font-sans")}
+        style={positionStyle}
+        title={title}
+        aria-label={`${title}. Click to reserve this table.`}
+        onClick={onActivate}
+      >
+        {inner}
+      </button>
+    )
+  }
+
   return (
-    <div
-      className={cn(
-        TILE_SHELL,
-        "border-green-300 bg-green-100 dark:border-green-700 dark:bg-green-950/45"
-      )}
-      style={positionStyle}
-      title={title}
-    >
-      <LibraryMapTableTileContent
-        tableNumber={tableNumber}
-        tableType={tableType}
-        typeLabel={typeLabel}
-        subtextClassName="text-green-900/85 dark:text-green-50/90"
-      />
+    <div className={shellClass} style={positionStyle} title={title}>
+      {inner}
     </div>
   )
 }
@@ -102,7 +124,7 @@ export function LibraryMapTableTileReserved({
     <div
       className={cn(
         TILE_SHELL,
-        "border-yellow-300 bg-yellow-100 dark:border-yellow-600 dark:bg-yellow-950/40"
+        "cursor-default border-yellow-300 bg-yellow-100 dark:border-yellow-600 dark:bg-yellow-950/40"
       )}
       style={positionStyle}
       title={title}
@@ -129,7 +151,7 @@ export function LibraryMapTableTileOccupied({
     <div
       className={cn(
         TILE_SHELL,
-        "border-red-300 bg-red-100 dark:border-red-700 dark:bg-red-950/45"
+        "cursor-default border-red-300 bg-red-100 dark:border-red-700 dark:bg-red-950/45"
       )}
       style={positionStyle}
       title={title}

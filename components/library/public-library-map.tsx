@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowRight, Circle, Square, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   LIBRARY_MAP_STORAGE_KEY,
   LIBRARY_MAP_UPDATE_EVENT,
@@ -52,10 +61,14 @@ const SEATS_PER_TABLE_TYPE = {
 } as const
 
 export function PublicLibraryMap() {
+  const router = useRouter()
   const [tables, setTables] = React.useState<AdminTableRecord[]>([])
   const [floor, setFloor] = React.useState<(typeof libraryFloors)[number]>(1)
   const [hydrated, setHydrated] = React.useState(false)
   const [now, setNow] = React.useState(() => new Date())
+  const [reservePromptTable, setReservePromptTable] = React.useState<
+    number | null
+  >(null)
 
   React.useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 30_000)
@@ -295,8 +308,8 @@ export function PublicLibraryMap() {
 
               <div
                 className="relative w-full overflow-hidden rounded-xl border bg-muted/20 aspect-[900/520]"
-                role="img"
-                aria-label={`Library map floor ${floor}`}
+                role="region"
+                aria-label={`Library map floor ${floor}. Green tables are free to reserve.`}
               >
                 {visibleTables.map((t) => {
                   const status = getTableMapStatus(t, mockReservations, now)
@@ -318,7 +331,13 @@ export function PublicLibraryMap() {
                   switch (status) {
                     case "free":
                       return (
-                        <LibraryMapTableTileFree key={t.id} {...tileProps} />
+                        <LibraryMapTableTileFree
+                          key={t.id}
+                          {...tileProps}
+                          onActivate={() =>
+                            setReservePromptTable(t.tableNumber)
+                          }
+                        />
                       )
                     case "reserved":
                       return (
@@ -372,6 +391,53 @@ export function PublicLibraryMap() {
           </CardContent>
         </Card>
       </main>
+
+      <Dialog
+        open={reservePromptTable !== null}
+        onOpenChange={(open) => {
+          if (!open) setReservePromptTable(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reserve this table?</DialogTitle>
+            <DialogDescription>
+              {reservePromptTable != null ? (
+                <>
+                  Do you want to reserve table no.{" "}
+                  <span className="font-semibold text-foreground">
+                    {reservePromptTable}
+                  </span>
+                  ?
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReservePromptTable(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const n = reservePromptTable
+                setReservePromptTable(null)
+                if (n != null) {
+                  router.push(
+                    `/reservations/reserve?table=${encodeURIComponent(String(n))}`
+                  )
+                }
+              }}
+            >
+              Yes, reserve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
