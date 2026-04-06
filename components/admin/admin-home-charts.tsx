@@ -28,8 +28,8 @@ import {
 } from "@/components/ui/card"
 import type {
   DayCountPoint,
-  ProgramCountPoint,
-  StatusCountPoint,
+  AvailabilityCountPoint,
+  RoleCountPoint,
 } from "@/lib/data/admin-chart-data"
 
 const programChartConfig = {
@@ -62,25 +62,25 @@ const statusChartConfig = {
 } satisfies ChartConfig
 
 type Props = {
-  programData: ProgramCountPoint[]
-  statusData: StatusCountPoint[]
+  roleData: RoleCountPoint[]
+  availabilityData: AvailabilityCountPoint[]
   timelineData: DayCountPoint[]
 }
 
 export function AdminHomeCharts({
-  programData,
-  statusData,
+  roleData,
+  availabilityData,
   timelineData,
 }: Props) {
-  const pieData = statusData.filter((d) => d.count > 0)
+  const pieData = availabilityData.filter((d) => d.count > 0)
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>Students by program</CardTitle>
+          <CardTitle>Users by role</CardTitle>
           <CardDescription>
-            Headcount grouped by academic program (sample data).
+            Headcount grouped by role (sample data).
           </CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
@@ -90,12 +90,12 @@ export function AdminHomeCharts({
           >
             <BarChart
               accessibilityLayer
-              data={programData}
+              data={roleData}
               margin={{ left: 12, right: 12, top: 12 }}
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
-                dataKey="program"
+                dataKey="role"
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
@@ -122,8 +122,8 @@ export function AdminHomeCharts({
 
       <Card>
         <CardHeader>
-          <CardTitle>Reservation status</CardTitle>
-          <CardDescription>Share of records by outcome.</CardDescription>
+          <CardTitle>Reservation availability</CardTitle>
+          <CardDescription>Share of records by availability flag.</CardDescription>
         </CardHeader>
         <CardContent className="flex min-h-[280px] flex-col items-center justify-center pb-4">
           {pieData.length === 0 ? (
@@ -135,12 +135,17 @@ export function AdminHomeCharts({
             >
               <PieChart>
                 <ChartTooltip
-                  content={<ChartTooltipContent hideLabel nameKey="status" />}
+                  content={
+                    <ChartTooltipContent
+                      hideLabel
+                      nameKey="availability"
+                    />
+                  }
                 />
                 <Pie
                   data={pieData}
                   dataKey="count"
-                  nameKey="status"
+                  nameKey="availability"
                   innerRadius={56}
                   strokeWidth={2}
                   stroke="hsl(var(--background))"

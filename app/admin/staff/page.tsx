@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+
 import {
   Table,
   TableBody,
@@ -12,8 +13,8 @@ import { Button } from "@/components/ui/button"
 import { mockStudents } from "@/lib/data/admin-mock"
 
 export const metadata: Metadata = {
-  title: "Students",
-  description: "View registered students",
+  title: "Staff",
+  description: "View registered staff",
 }
 
 const formatter = new Intl.DateTimeFormat(undefined, {
@@ -21,11 +22,13 @@ const formatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 })
 
-export default function AdminStudentsPage() {
+export default function AdminStaffPage() {
+  const staff = mockStudents.filter((u) => u.role === "staff")
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Students</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Staff</h1>
         <p className="text-muted-foreground">
           Read-only list. Replace mock data with your API response.
         </p>
@@ -45,7 +48,7 @@ export default function AdminStudentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockStudents.map((s) => (
+            {staff.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-mono text-xs text-muted-foreground">
                   {s.id}
@@ -62,7 +65,7 @@ export default function AdminStudentsPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <Button asChild variant="outline" size="sm">
-                    <Link href={`/admin/students/${encodeURIComponent(s.id)}`}>
+                    <Link href={`/admin/staff/${encodeURIComponent(s.id)}`}>
                       Details
                     </Link>
                   </Button>

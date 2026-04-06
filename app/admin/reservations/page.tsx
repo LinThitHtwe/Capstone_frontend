@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -7,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { mockReservations } from "@/lib/data/admin-mock"
 
 export const metadata: Metadata = {
@@ -23,15 +25,9 @@ function formatRange(start: string, end: string) {
   return `${formatter.format(new Date(start))} → ${formatter.format(new Date(end))}`
 }
 
-const statusLabel: Record<(typeof mockReservations)[number]["status"], string> = {
-  confirmed: "Confirmed",
-  completed: "Completed",
-  cancelled: "Cancelled",
-}
-
 export default function AdminReservationsPage() {
   const sorted = [...mockReservations].sort(
-    (a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()
+    (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
   )
 
   return (
@@ -49,10 +45,11 @@ export default function AdminReservationsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>ID</TableHead>
-              <TableHead>Student</TableHead>
-              <TableHead>Resource</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Table</TableHead>
               <TableHead>Schedule</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              <TableHead className="text-right">Duration</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -61,12 +58,26 @@ export default function AdminReservationsPage() {
                 <TableCell className="font-mono text-xs text-muted-foreground">
                   {r.id}
                 </TableCell>
-                <TableCell className="font-medium">{r.studentName}</TableCell>
-                <TableCell>{r.resource}</TableCell>
-                <TableCell className="max-w-[220px] text-muted-foreground">
-                  {formatRange(r.startAt, r.endAt)}
+                <TableCell>
+                  <div className="font-medium">{r.userName}</div>
+                  <div className="text-xs text-muted-foreground">{r.userEmail}</div>
                 </TableCell>
-                <TableCell className="text-right">{statusLabel[r.status]}</TableCell>
+                <TableCell className="font-medium tabular-nums">
+                  #{r.tableNumber}
+                </TableCell>
+                <TableCell className="max-w-[220px] text-muted-foreground">
+                  {formatRange(r.startTime, r.endTime)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {r.durationMinutes}m
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/admin/reservations/${encodeURIComponent(r.id)}`}>
+                      Details
+                    </Link>
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/card"
 import {
   buildReservationsByDay,
-  buildReservationsByStatus,
-  buildStudentsByProgram,
+  buildReservationsByAvailability,
+  buildStudentsByRole,
 } from "@/lib/data/admin-chart-data"
 import { mockReservations, mockStudents } from "@/lib/data/admin-mock"
 
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
 }
 
 export default function AdminHomePage() {
-  const upcoming = mockReservations.filter((r) => r.status === "confirmed").length
-  const programData = buildStudentsByProgram(mockStudents)
-  const statusData = buildReservationsByStatus(mockReservations)
+  const upcoming = mockReservations.filter((r) => r.isAvailable).length
+  const roleData = buildStudentsByRole(mockStudents)
+  const availabilityData = buildReservationsByAvailability(mockReservations)
   const timelineData = buildReservationsByDay(mockReservations)
 
   return (
@@ -68,8 +68,8 @@ export default function AdminHomePage() {
       </div>
 
       <AdminHomeCharts
-        programData={programData}
-        statusData={statusData}
+        roleData={roleData}
+        availabilityData={availabilityData}
         timelineData={timelineData}
       />
     </div>

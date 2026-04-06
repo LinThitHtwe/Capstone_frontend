@@ -2,7 +2,15 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { History, Home, LayoutDashboard, Users } from "lucide-react"
+import {
+  GraduationCap,
+  History,
+  Home,
+  LayoutDashboard,
+  Map,
+  UserCog,
+  Users,
+} from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
@@ -10,6 +18,14 @@ import { Separator } from "@/components/ui/separator"
 const nav = [
   { href: "/admin", label: "Home", icon: Home, exact: true },
   { href: "/admin/students", label: "Students", icon: Users, exact: false },
+  { href: "/admin/staff", label: "Staff", icon: UserCog, exact: false },
+  {
+    href: "/admin/lecturers",
+    label: "Lecturers",
+    icon: GraduationCap,
+    exact: false,
+  },
+  { href: "/admin/tables", label: "Tables map", icon: Map, exact: false },
   {
     href: "/admin/reservations",
     label: "Reservation history",

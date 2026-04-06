@@ -1,12 +1,12 @@
 import type { ReservationRecord, StudentRecord } from "./admin-mock"
 
-export type ProgramCountPoint = {
-  program: string
+export type RoleCountPoint = {
+  role: string
   count: number
 }
 
-export type StatusCountPoint = {
-  status: string
+export type AvailabilityCountPoint = {
+  availability: "available" | "unavailable"
   label: string
   count: number
   fill: string
@@ -19,47 +19,45 @@ export type DayCountPoint = {
   count: number
 }
 
-const STATUS_META: Record<
-  ReservationRecord["status"],
+const AVAILABILITY_META: Record<
+  AvailabilityCountPoint["availability"],
   { label: string; fillVar: string }
 > = {
-  confirmed: { label: "Confirmed", fillVar: "hsl(var(--chart-1))" },
-  completed: { label: "Completed", fillVar: "hsl(var(--chart-2))" },
-  cancelled: { label: "Cancelled", fillVar: "hsl(var(--chart-3))" },
+  available: { label: "Available", fillVar: "hsl(var(--chart-1))" },
+  unavailable: { label: "Unavailable", fillVar: "hsl(var(--chart-3))" },
 }
 
-export function buildStudentsByProgram(
-  students: StudentRecord[]
-): ProgramCountPoint[] {
+export function buildStudentsByRole(students: StudentRecord[]): RoleCountPoint[] {
   const map = new Map<string, number>()
   for (const s of students) {
-    map.set(s.program, (map.get(s.program) ?? 0) + 1)
+    map.set(s.role, (map.get(s.role) ?? 0) + 1)
   }
-  return Array.from(map.entries()).map(([program, count]) => ({
-    program:
-      program.length > 22 ? `${program.slice(0, 20).trim()}…` : program,
+  return Array.from(map.entries()).map(([role, count]) => ({
+    role: role.length > 22 ? `${role.slice(0, 20).trim()}…` : role,
     count,
   }))
 }
 
-export function buildReservationsByStatus(
+export function buildReservationsByAvailability(
   reservations: ReservationRecord[]
-): StatusCountPoint[] {
-  const order: ReservationRecord["status"][] = [
-    "confirmed",
-    "completed",
-    "cancelled",
+): AvailabilityCountPoint[] {
+  const order: AvailabilityCountPoint["availability"][] = [
+    "available",
+    "unavailable",
   ]
-  const map = new Map<ReservationRecord["status"], number>()
-  for (const s of order) map.set(s, 0)
+  const map = new Map<AvailabilityCountPoint["availability"], number>()
+  for (const a of order) map.set(a, 0)
   for (const r of reservations) {
-    map.set(r.status, (map.get(r.status) ?? 0) + 1)
+    const key: AvailabilityCountPoint["availability"] = r.isAvailable
+      ? "available"
+      : "unavailable"
+    map.set(key, (map.get(key) ?? 0) + 1)
   }
-  return order.map((status) => ({
-    status,
-    label: STATUS_META[status].label,
-    count: map.get(status) ?? 0,
-    fill: STATUS_META[status].fillVar,
+  return order.map((availability) => ({
+    availability,
+    label: AVAILABILITY_META[availability].label,
+    count: map.get(availability) ?? 0,
+    fill: AVAILABILITY_META[availability].fillVar,
   }))
 }
 
@@ -73,7 +71,7 @@ export function buildReservationsByDay(
 ): DayCountPoint[] {
   const map = new Map<string, number>()
   for (const r of reservations) {
-    const day = r.startAt.slice(0, 10)
+    const day = r.startTime.slice(0, 10)
     map.set(day, (map.get(day) ?? 0) + 1)
   }
   return Array.from(map.entries())
