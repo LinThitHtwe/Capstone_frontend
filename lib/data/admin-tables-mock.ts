@@ -10,36 +10,66 @@ export type AdminTableRecord = {
   isAvailable: boolean
 }
 
-export const defaultAdminTables: AdminTableRecord[] = [
-  {
-    id: "tbl-001",
-    tableNumber: 1,
-    tableType: "SINGLE",
-    libraryFloor: 1,
-    positionX: 120,
-    positionY: 90,
-    isReservable: true,
-    isAvailable: true,
-  },
-  {
-    id: "tbl-002",
-    tableNumber: 2,
-    tableType: "DOUBLE",
-    libraryFloor: 1,
-    positionX: 220,
-    positionY: 90,
-    isReservable: true,
-    isAvailable: false,
-  },
-  {
-    id: "tbl-003",
-    tableNumber: 12,
-    tableType: "QUAD",
-    libraryFloor: 2,
-    positionX: 160,
-    positionY: 190,
-    isReservable: false,
-    isAvailable: true,
-  },
+const types = ["SINGLE", "CIRCULAR", "FOUR_SEATS"] as const
+
+/** Irregular [x, y] pairs per floor — spaced to avoid overlap (tiles 72×52 on 900×520 map). */
+const SCATTER_FLOOR_1: Array<[number, number]> = [
+  [40, 45],
+  [200, 38],
+  [380, 62],
+  [560, 44],
+  [740, 58],
+  [90, 160],
+  [320, 140],
+  [520, 175],
+  [720, 155],
+  [55, 300],
+  [280, 285],
+  [510, 320],
+  [700, 295],
 ]
 
+const SCATTER_FLOOR_2: Array<[number, number]> = [
+  [30, 50],
+  [175, 42],
+  [340, 68],
+  [500, 48],
+  [680, 62],
+  [765, 88],
+  [85, 175],
+  [290, 155],
+  [480, 195],
+  [640, 168],
+  [800, 210],
+  [120, 340],
+  [380, 315],
+  [600, 355],
+]
+
+function buildDefaultAdminTables(): AdminTableRecord[] {
+  const out: AdminTableRecord[] = []
+  let n = 1
+
+  const pushFloor = (floor: 1 | 2, coords: Array<[number, number]>) => {
+    coords.forEach(([positionX, positionY], i) => {
+      out.push({
+        id: `tbl-${String(n).padStart(3, "0")}`,
+        tableNumber: n,
+        tableType: types[(i + floor * 3) % 3],
+        libraryFloor: floor,
+        positionX,
+        positionY,
+        isReservable: (i + floor) % 4 !== 0,
+        isAvailable: (i + floor * 2) % 5 !== 0,
+      })
+      n += 1
+    })
+  }
+
+  pushFloor(1, SCATTER_FLOOR_1)
+  pushFloor(2, SCATTER_FLOOR_2)
+
+  return out
+}
+
+export const defaultAdminTables: AdminTableRecord[] = buildDefaultAdminTables()
