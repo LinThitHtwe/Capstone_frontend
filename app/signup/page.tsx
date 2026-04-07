@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -13,25 +15,45 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { apiLogin, apiSignup } from "@/lib/api"
 
 export default function SignUpPage() {
+  const router = useRouter()
+  const { setTokens } = useAuth()
+  const [name, setName] = React.useState("")
+  const [idNumber, setIdNumber] = React.useState("")
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [confirmPassword, setConfirmPassword] = React.useState("")
   const [error, setError] = React.useState("")
-  const [submitted, setSubmitted] = React.useState(false)
+  const [pending, setPending] = React.useState(false)
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setSubmitted(false)
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.")
       return
     }
 
-    setSubmitted(true)
+    setPending(true)
+    try {
+      await apiSignup({
+        email,
+        password,
+        password_confirm: confirmPassword,
+        name,
+        id_number: idNumber,
+      })
+      const tokens = await apiLogin(email, password)
+      setTokens(tokens.access, tokens.refresh)
+      router.push("/")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign up failed")
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -51,7 +73,8 @@ export default function SignUpPage() {
               Create account
             </CardTitle>
             <CardDescription>
-              Sign up for library access. This form is a UI demo only.
+              Register for library access. Admin accounts cannot be created
+              here.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -65,15 +88,31 @@ export default function SignUpPage() {
                 </div>
               ) : null}
 
-              {submitted && !error ? (
-                <div
-                  role="status"
-                  className="rounded-lg border border-green-600/30 bg-green-500/10 px-3 py-2 text-sm text-green-800 dark:border-green-500/35 dark:bg-green-500/15 dark:text-green-200"
-                >
-                  Details captured (demo). Backend registration is not wired
-                  yet.
-                </div>
-              ) : null}
+              <div className="space-y-2">
+                <Label htmlFor="signup-name">Full name</Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-id">Student / staff ID</Label>
+                <Input
+                  id="signup-id"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="e.g. STU12345"
+                  value={idNumber}
+                  onChange={(e) => setIdNumber(e.target.value)}
+                  required
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="signup-email">Email</Label>
@@ -94,9 +133,10 @@ export default function SignUpPage() {
                   id="signup-password"
                   type="password"
                   autoComplete="new-password"
-                  placeholder="Create a password"
+                  placeholder="At least 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  minLength={8}
                   required
                 />
               </div>
@@ -110,12 +150,13 @@ export default function SignUpPage() {
                   placeholder="Repeat password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  minLength={8}
                   required
                 />
               </div>
 
-              <Button type="submit" className="w-full">
-                Sign up
+              <Button type="submit" className="w-full" disabled={pending}>
+                {pending ? "Creating account…" : "Sign up"}
               </Button>
             </form>
 

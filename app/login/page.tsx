@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -14,22 +15,36 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { apiLogin } from "@/lib/api"
+import { postLoginRedirectPath } from "@/lib/post-login-redirect"
+
+function readFromQuery(): string | null {
+  if (typeof window === "undefined") return null
+  return new URLSearchParams(window.location.search).get("from")
+}
 
 export default function LoginPage() {
   const router = useRouter()
+  const { setTokens } = useAuth()
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [error, setError] = React.useState("")
+  const [pending, setPending] = React.useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-
-    if (email === "test@mail.com" && password === "password123") {
-      router.push("/")
-      return
+    setPending(true)
+    try {
+      const result = await apiLogin(email, password)
+      setTokens(result.access, result.refresh)
+      const target = postLoginRedirectPath(result.user.role, readFromQuery())
+      router.replace(target)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed")
+    } finally {
+      setPending(false)
     }
-    setError("Invalid email or password")
   }
 
   return (
@@ -47,8 +62,8 @@ export default function LoginPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl tracking-tight">Log in</CardTitle>
             <CardDescription>
-              Demo: <span className="font-mono text-xs">test@mail.com</span> /{" "}
-              <span className="font-mono text-xs">password123</span>
+              One account for library and admin. After sign-in you are sent
+              where your role allows, using the role returned by the server.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -76,12 +91,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <span className="text-xs text-muted-foreground">
-                    Demo only
-                  </span>
-                </div>
+                <Label htmlFor="login-password">Password</Label>
                 <Input
                   id="login-password"
                   type="password"
@@ -93,8 +103,8 @@ export default function LoginPage() {
                 />
               </div>
 
-              <Button type="submit" className="w-full">
-                Log in
+              <Button type="submit" className="w-full" disabled={pending}>
+                {pending ? "Signing in…" : "Log in"}
               </Button>
             </form>
 

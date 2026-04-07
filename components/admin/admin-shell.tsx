@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { PanelLeft, PanelLeftClose } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { LogOut, PanelLeft, PanelLeftClose } from "lucide-react"
 
 import { AdminSidebarNav } from "@/components/admin/admin-sidebar-nav"
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +17,8 @@ function isMobileViewport() {
 }
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const { logout, email } = useAuth()
   const [open, setOpen] = React.useState(true)
   const [hydrated, setHydrated] = React.useState(false)
 
@@ -40,6 +44,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const afterNav = React.useCallback(() => {
     if (isMobileViewport()) setOpen(false)
   }, [])
+
+  const handleLogout = React.useCallback(() => {
+    logout()
+    router.replace("/login")
+  }, [logout, router])
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -98,9 +107,24 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <PanelLeft className="size-4" />
             )}
           </Button>
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
             Admin
+            {email ? (
+              <span className="ml-2 hidden text-xs font-normal text-muted-foreground/80 sm:inline">
+                ({email})
+              </span>
+            ) : null}
           </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            onClick={handleLogout}
+          >
+            <LogOut className="size-3.5" aria-hidden />
+            Log out
+          </Button>
         </header>
         <main className="flex-1 p-6 md:p-8">{children}</main>
       </div>

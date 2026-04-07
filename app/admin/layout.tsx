@@ -1,16 +1,17 @@
 import type { Metadata } from "next"
 
-import { AdminShell } from "@/components/admin/admin-shell"
-
 export const metadata: Metadata = {
-  title: "Admin",
-  description: "Administrative view (read-only)",
+  title: {
+    default: "Admin",
+    template: "%s | Admin",
+  },
+  description: "Administrative area",
 }
 
-export default function AdminLayout({
+export default function AdminRootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <AdminShell>{children}</AdminShell>
+  return children
 }
