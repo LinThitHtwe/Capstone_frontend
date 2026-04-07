@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react"
 
+import { LibraryMapPannableViewport } from "@/components/library/library-map-pannable-viewport"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -410,7 +411,8 @@ export default function AdminTablesPage() {
           <CardHeader>
             <CardTitle>Library top view</CardTitle>
             <CardDescription>
-              Drag tiles to reposition. Editing floor {floor}.
+              Drag tiles to reposition. When the map is larger than the frame,
+              scroll or drag empty space to pan. Editing floor {floor}.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -444,16 +446,12 @@ export default function AdminTablesPage() {
                 {visibleTables.length} table{visibleTables.length === 1 ? "" : "s"}
               </div>
             </div>
-            <div
-              className="relative overflow-hidden rounded-xl border bg-muted/20"
-              style={{
-                width: "100%",
-                maxWidth: mapSize.w,
-                height: mapSize.h,
-              }}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
+            <LibraryMapPannableViewport
+              aria-label={`Admin library map, floor ${floor}. Drag tiles to move, or drag empty area to pan.`}
+              overflowHintText="Scroll or drag sideways · drag tiles to move"
+              onScrollAreaPointerMove={handlePointerMove}
+              onScrollAreaPointerUp={handlePointerUp}
+              onScrollAreaPointerCancel={handlePointerUp}
             >
               {visibleTables.map((t) => {
                 const active = t.id === selectedId
@@ -502,7 +500,7 @@ export default function AdminTablesPage() {
                   </div>
                 )
               })}
-            </div>
+            </LibraryMapPannableViewport>
           </CardContent>
         </Card>
 

@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 import { AdminHomeCharts } from "@/components/admin/admin-home-charts"
+import { AdminLibraryOccupancy } from "@/components/admin/admin-library-occupancy"
+import { LibraryMapExperienceCard } from "@/components/library/library-map-experience-card"
 import {
   Card,
   CardContent,
@@ -33,6 +35,11 @@ export default function AdminHomePage() {
           Overview of students and reservations (sample data).
         </p>
       </div>
+
+      <AdminLibraryOccupancy />
+
+      <LibraryMapExperienceCard variant="admin" />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">

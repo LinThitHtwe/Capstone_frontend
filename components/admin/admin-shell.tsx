@@ -59,7 +59,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         aria-hidden={!open}
         className={cn(
           "flex min-w-0 shrink-0 flex-col border-r bg-muted/30 transition-[transform,width,border-color] duration-200 ease-out",
-          "fixed left-0 top-0 z-50 h-full w-60 md:relative md:z-auto md:h-auto",
+          "fixed left-0 top-0 z-50 h-full w-60 md:sticky md:top-0 md:z-auto md:h-screen md:min-h-0 md:self-start md:overflow-hidden",
           open
             ? "translate-x-0 md:w-60"
             : "-translate-x-full pointer-events-none md:pointer-events-auto md:translate-x-0 md:w-0 md:overflow-hidden md:border-transparent"
