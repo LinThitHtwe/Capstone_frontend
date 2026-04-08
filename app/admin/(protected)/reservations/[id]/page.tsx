@@ -50,7 +50,7 @@ export default async function AdminReservationDetailsPage({
   if (!r) notFound()
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full max-w-3xl space-y-6">
       <div className="space-y-2">
         <Button asChild variant="ghost" size="sm" className="-ml-2 w-fit">
           <Link href="/admin/reservations">

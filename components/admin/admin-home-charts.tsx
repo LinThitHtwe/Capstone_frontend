@@ -131,7 +131,7 @@ export function AdminHomeCharts({
           ) : (
             <ChartContainer
               config={statusChartConfig}
-              className="mx-auto aspect-square w-full max-w-[280px]"
+              className="aspect-square w-full max-w-[280px]"
             >
               <PieChart>
                 <ChartTooltip

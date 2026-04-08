@@ -106,3 +106,68 @@ export function authHeaders(accessToken: string | null): HeadersInit {
   if (!accessToken) return {}
   return { Authorization: `Bearer ${accessToken}` }
 }
+
+export type AdminTable = {
+  id: number
+  table_number: number
+  table_type: string
+  library_floor: number
+  position_x: number
+  position_y: number
+  is_reservable: boolean
+  is_available: boolean
+  weight_sensor_id: number | null
+}
+
+async function parseJson(res: Response): Promise<unknown> {
+  return await res.json().catch(() => ({}))
+}
+
+export async function apiAdminListTables(accessToken: string): Promise<AdminTable[]> {
+  const res = await fetch(apiUrl("admin/tables/"), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminTable[]
+}
+
+export async function apiAdminCreateTable(
+  accessToken: string,
+  body: Omit<AdminTable, "id">
+): Promise<AdminTable> {
+  const res = await fetch(apiUrl("admin/tables/"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
+    body: JSON.stringify(body),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminTable
+}
+
+export async function apiAdminUpdateTable(
+  accessToken: string,
+  id: number,
+  body: Omit<AdminTable, "id">
+): Promise<AdminTable> {
+  const res = await fetch(apiUrl(`admin/tables/${id}/`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
+    body: JSON.stringify(body),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminTable
+}
+
+export async function apiAdminDeleteTable(accessToken: string, id: number): Promise<void> {
+  const res = await fetch(apiUrl(`admin/tables/${id}/`), {
+    method: "DELETE",
+    headers: { ...authHeaders(accessToken) },
+  })
+  if (res.status === 204) return
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+}

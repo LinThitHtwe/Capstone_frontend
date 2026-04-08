@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react"
 
+import { useAuth } from "@/components/auth/auth-provider"
 import { LibraryMapPannableViewport } from "@/components/library/library-map-pannable-viewport"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,6 +29,12 @@ import {
   type AdminTableRecord,
   defaultAdminTables,
 } from "@/lib/data/admin-tables-mock"
+import {
+  apiAdminCreateTable,
+  apiAdminDeleteTable,
+  apiAdminListTables,
+  apiAdminUpdateTable,
+} from "@/lib/api"
 import {
   LIBRARY_MAP_STORAGE_KEY,
   LIBRARY_MAP_UPDATE_EVENT,
@@ -150,12 +157,20 @@ function createTable(
   }
 }
 
+function isNumericId(id: string): boolean {
+  return /^\d+$/.test(id)
+}
+
 export default function AdminTablesPage() {
+  const { accessToken } = useAuth()
   const [tables, setTables] = React.useState<AdminTableRecord[]>([])
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [floor, setFloor] = React.useState<(typeof floors)[number]>(1)
   /** JSON snapshot of last persisted state (localStorage now; replace with API success later). */
   const [savedRevision, setSavedRevision] = React.useState("")
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState("")
+  const deletedIdsRef = React.useRef<number[]>([])
 
   const historyRef = React.useRef<{
     past: AdminTableRecord[][]
@@ -179,17 +194,84 @@ export default function AdminTablesPage() {
     return JSON.stringify(tables) !== savedRevision
   }, [tables, savedRevision])
 
+  const isFloorDirty = React.useMemo(() => {
+    if (!savedRevision) return false
+    try {
+      const saved = JSON.parse(savedRevision) as AdminTableRecord[]
+      if (!Array.isArray(saved)) return false
+      const sortKey = (t: AdminTableRecord) => t.id
+      const cur = tables
+        .filter((t) => t.libraryFloor === floor)
+        .slice()
+        .sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+      const sav = saved
+        .filter((t) => t.libraryFloor === floor)
+        .slice()
+        .sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+      return JSON.stringify(cur) !== JSON.stringify(sav)
+    } catch {
+      return false
+    }
+  }, [tables, savedRevision, floor])
+
   React.useEffect(() => {
-    const loaded = loadTables()
-    setTables(loaded)
-    const initialFloor = loaded.some((t) => t.libraryFloor === 2) ? 1 : 1
+    let cancelled = false
+    async function run() {
+      setLoading(true)
+      setError("")
+      try {
+        if (!accessToken) {
+          const loaded = loadTables()
+          if (cancelled) return
+          setTables(loaded)
+          const json = JSON.stringify(loaded)
+          historyRef.current.lastJson = json
+          setSavedRevision(json)
+          return
+        }
+
+        const apiTables = await apiAdminListTables(accessToken)
+        if (cancelled) return
+
+        const mapped: AdminTableRecord[] = apiTables.map((t) => ({
+          id: String(t.id),
+          tableNumber: t.table_number,
+          tableType: t.table_type,
+          libraryFloor: t.library_floor,
+          positionX: t.position_x,
+          positionY: t.position_y,
+          isReservable: t.is_reservable,
+          isAvailable: t.is_available,
+        }))
+        setTables(mapped)
+        const json = JSON.stringify(mapped)
+        historyRef.current.lastJson = json
+        setSavedRevision(json)
+      } catch (e) {
+        const loaded = loadTables()
+        if (cancelled) return
+        setTables(loaded)
+        const json = JSON.stringify(loaded)
+        historyRef.current.lastJson = json
+        setSavedRevision(json)
+        setError(e instanceof Error ? e.message : "Failed to load tables")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken])
+
+  React.useEffect(() => {
+    if (tables.length === 0) return
+    const initialFloor = tables.some((t) => t.libraryFloor === 2) ? 1 : 1
     setFloor(initialFloor)
-    const firstVisible = loaded.find((t) => t.libraryFloor === initialFloor)
-    setSelectedId((prev) => prev ?? firstVisible?.id ?? loaded[0]?.id ?? null)
-    const json = JSON.stringify(loaded)
-    historyRef.current.lastJson = json
-    setSavedRevision(json)
-  }, [])
+    const firstVisible = tables.find((t) => t.libraryFloor === initialFloor)
+    setSelectedId((prev) => prev ?? firstVisible?.id ?? tables[0]?.id ?? null)
+  }, [tables])
 
   React.useEffect(() => {
     if (tables.length === 0) return
@@ -238,6 +320,12 @@ export default function AdminTablesPage() {
     if (!selectedId) return
     setTables((prev) => {
       const idx = prev.findIndex((t) => t.id === selectedId)
+      if (idx >= 0) {
+        const maybeNumeric = prev[idx]?.id
+        if (maybeNumeric && isNumericId(maybeNumeric)) {
+          deletedIdsRef.current.push(Number(maybeNumeric))
+        }
+      }
       const next = prev.filter((t) => t.id !== selectedId)
       const nextSelected =
         next[Math.min(idx, next.length - 1)]?.id ?? next[0]?.id ?? null
@@ -247,28 +335,97 @@ export default function AdminTablesPage() {
   }, [selectedId])
 
   const onReset = React.useCallback(() => {
-    setTables(defaultAdminTables)
-    setSelectedId(defaultAdminTables[0]?.id ?? null)
-  }, [])
-
-  const onSave = React.useCallback(() => {
-    saveTables(tables)
-    const json = JSON.stringify(tables)
-    setSavedRevision(json)
-    historyRef.current.lastJson = json
-    window.dispatchEvent(new Event(LIBRARY_MAP_UPDATE_EVENT))
-    // Later: await fetch('/api/admin/tables', { method: 'PUT', body: json })
-  }, [tables])
-
-  const onResetFloor = React.useCallback(() => {
+    if (!savedRevision) return
+    let saved: AdminTableRecord[]
+    try {
+      saved = JSON.parse(savedRevision) as AdminTableRecord[]
+      if (!Array.isArray(saved)) return
+    } catch {
+      return
+    }
+    const restored = saved.filter((t) => t.libraryFloor === floor)
+    const restoredBackendIds = new Set(
+      restored.map((t) => t.id).filter(isNumericId).map((id) => Number(id))
+    )
+    deletedIdsRef.current = deletedIdsRef.current.filter(
+      (id) => !restoredBackendIds.has(id)
+    )
+    historyRef.current.suppressNext = true
     setTables((prev) => {
-      const keepOtherFloors = prev.filter((t) => t.libraryFloor !== floor)
-      const resetThisFloor = defaultAdminTables.filter((t) => t.libraryFloor === floor)
-      const next = [...keepOtherFloors, ...resetThisFloor]
-      setSelectedId(resetThisFloor[0]?.id ?? next.find((t) => t.libraryFloor === floor)?.id ?? null)
+      const keep = prev.filter((t) => t.libraryFloor !== floor)
+      const next = [...keep, ...restored]
+      setSelectedId(
+        restored[0]?.id ??
+          next.find((t) => t.libraryFloor === floor)?.id ??
+          null
+      )
       return next
     })
-  }, [floor])
+  }, [floor, savedRevision])
+
+  const onSave = React.useCallback(async () => {
+    setError("")
+    if (!accessToken) {
+      saveTables(tables)
+      const json = JSON.stringify(tables)
+      setSavedRevision(json)
+      historyRef.current.lastJson = json
+      window.dispatchEvent(new Event(LIBRARY_MAP_UPDATE_EVENT))
+      return
+    }
+
+    try {
+      // Apply deletes first (for records that existed on the backend).
+      const toDelete = Array.from(new Set(deletedIdsRef.current))
+      deletedIdsRef.current = []
+      for (const id of toDelete) {
+        // eslint-disable-next-line no-await-in-loop
+        await apiAdminDeleteTable(accessToken, id)
+      }
+
+      // Upsert all current tables.
+      const idRemap = new Map<string, string>()
+      for (const t of tables) {
+        const body = {
+          table_number: t.tableNumber,
+          table_type: t.tableType,
+          library_floor: t.libraryFloor,
+          position_x: t.positionX,
+          position_y: t.positionY,
+          is_reservable: t.isReservable,
+          is_available: t.isAvailable,
+          weight_sensor_id: null,
+        }
+
+        if (isNumericId(t.id)) {
+          // eslint-disable-next-line no-await-in-loop
+          await apiAdminUpdateTable(accessToken, Number(t.id), body)
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          const created = await apiAdminCreateTable(accessToken, body)
+          idRemap.set(t.id, String(created.id))
+        }
+      }
+
+      if (idRemap.size) {
+        setTables((prev) =>
+          prev.map((t) => {
+            const nextId = idRemap.get(t.id)
+            return nextId ? { ...t, id: nextId } : t
+          })
+        )
+      }
+
+      const json = JSON.stringify(
+        tables.map((t) => ({ ...t, id: idRemap.get(t.id) ?? t.id }))
+      )
+      setSavedRevision(json)
+      historyRef.current.lastJson = json
+      window.dispatchEvent(new Event(LIBRARY_MAP_UPDATE_EVENT))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed")
+    }
+  }, [accessToken, tables])
 
   const canUndo = historyRef.current.past.length > 0
   const canRedo = historyRef.current.future.length > 0
@@ -348,8 +505,8 @@ export default function AdminTablesPage() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-4 overflow-hidden">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tables</h1>
           <p className="text-muted-foreground">
@@ -388,16 +545,19 @@ export default function AdminTablesPage() {
           <Button
             type="button"
             onClick={onSave}
-            disabled={!isDirty}
+              disabled={!isDirty || loading}
           >
             <Save />
             Save
           </Button>
-          <Button type="button" variant="outline" onClick={onResetFloor}>
-            Reset floor
-          </Button>
-          <Button type="button" variant="outline" onClick={onReset}>
-            Reset all
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onReset}
+            disabled={!isFloorDirty || loading}
+            aria-label="Reset unsaved changes on this floor"
+          >
+            Reset
           </Button>
           <Button type="button" onClick={onAdd}>
             <Plus />
@@ -406,16 +566,16 @@ export default function AdminTablesPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr,360px]">
-        <Card>
-          <CardHeader>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-[1fr_13.5rem] lg:grid-rows-[minmax(0,1fr)] lg:items-start lg:gap-5 lg:overflow-hidden">
+        <Card className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:min-h-0 lg:h-full lg:self-stretch">
+          <CardHeader className="shrink-0">
             <CardTitle>Library top view</CardTitle>
             <CardDescription>
               Drag tiles to reposition. When the map is larger than the frame,
               scroll or drag empty space to pan. Editing floor {floor}.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-0 flex-1 overflow-y-auto">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <div className="inline-flex items-center rounded-lg border bg-background p-1 shadow-sm">
@@ -504,29 +664,37 @@ export default function AdminTablesPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Details</CardTitle>
-            <CardDescription>
+        <Card className="flex w-full min-w-0 max-w-full flex-col overflow-hidden lg:w-[13.5rem] lg:self-start lg:shadow-sm">
+          <CardHeader className="shrink-0 space-y-1 px-4 py-3 pb-2">
+            <CardTitle className="text-base">Details</CardTitle>
+            <CardDescription className="text-xs leading-snug">
               {selected ? (
                 <>
-                  Editing table <span className="font-mono">#{selected.tableNumber}</span>
+                  Table <span className="font-mono">#{selected.tableNumber}</span>
                 </>
               ) : (
-                "Select a table on the map."
+                "Tap a seat on the map."
               )}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="min-h-0 space-y-3 overflow-y-auto px-4 pb-4 pt-0">
+            {error ? (
+              <div
+                role="alert"
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs text-destructive"
+              >
+                {error}
+              </div>
+            ) : null}
             {!selected || selected.libraryFloor !== floor ? null : (
               <>
-                <div className="grid gap-3">
-                  <label className="grid gap-1.5 text-sm">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Table number
+                <div className="grid gap-2">
+                  <label className="grid gap-1 text-xs">
+                    <span className="font-medium text-muted-foreground">
+                      Number
                     </span>
                     <input
-                      className="h-9 rounded-md border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      className="h-8 w-full rounded-md border bg-background px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       type="number"
                       min={1}
                       value={selected.tableNumber}
@@ -536,12 +704,12 @@ export default function AdminTablesPage() {
                     />
                   </label>
 
-                  <label className="grid gap-1.5 text-sm">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Table type
+                  <label className="grid gap-1 text-xs">
+                    <span className="font-medium text-muted-foreground">
+                      Type
                     </span>
                     <select
-                      className="h-9 rounded-md border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      className="h-8 w-full rounded-md border bg-background px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       value={selected.tableType}
                       onChange={(e) => updateSelected({ tableType: e.target.value })}
                     >
@@ -553,67 +721,61 @@ export default function AdminTablesPage() {
                     </select>
                   </label>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="grid min-w-0 gap-1.5 text-sm">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Floor
-                      </span>
-                      <input
-                        className="h-9 w-full rounded-md border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        type="number"
-                        min={1}
-                        value={selected.libraryFloor}
-                        onChange={(e) =>
-                          updateSelected({ libraryFloor: Number(e.target.value) })
+                  <label className="grid gap-1 text-xs">
+                    <span className="font-medium text-muted-foreground">
+                      Floor
+                    </span>
+                    <input
+                      className="h-8 w-full rounded-md border bg-background px-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      type="number"
+                      min={1}
+                      value={selected.libraryFloor}
+                      onChange={(e) =>
+                        updateSelected({ libraryFloor: Number(e.target.value) })
+                      }
+                    />
+                  </label>
+
+                  <label className="grid gap-1 text-xs">
+                    <span className="font-medium text-muted-foreground">
+                      Reservable
+                    </span>
+                    <span className="flex h-8 w-full items-center justify-start">
+                      <Switch
+                        className="scale-90"
+                        checked={selected.isReservable}
+                        onCheckedChange={(v) =>
+                          updateSelected({ isReservable: v })
                         }
                       />
-                    </label>
-                    <label className="grid min-w-0 gap-1.5 text-sm">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        Reservable
-                      </span>
-                      <span className="flex h-9 w-full min-w-0 items-center justify-between gap-3 rounded-md border bg-background px-3 text-sm shadow-sm">
-                        <span className="min-w-0 truncate text-muted-foreground">
-                          {selected.isReservable ? "Yes" : "No"}
-                        </span>
-                        <Switch
-                          checked={selected.isReservable}
-                          onCheckedChange={(v) =>
-                            updateSelected({ isReservable: v })
-                          }
-                        />
-                      </span>
-                    </label>
-                  </div>
+                    </span>
+                  </label>
 
-                  <label className="grid gap-1.5 text-sm">
-                    <span className="text-xs font-medium text-muted-foreground">
+                  <label className="grid gap-1 text-xs">
+                    <span className="font-medium text-muted-foreground">
                       Available
                     </span>
-                    <span className="flex h-9 items-center justify-between gap-3 rounded-md border bg-background px-3 text-sm shadow-sm">
-                      <span className="text-muted-foreground">
-                        {selected.isAvailable ? "Yes" : "No"}
-                      </span>
+                    <span className="flex h-8 w-full items-center justify-start">
                       <Switch
+                        className="scale-90"
                         checked={selected.isAvailable}
                         onCheckedChange={(v) => updateSelected({ isAvailable: v })}
                       />
                     </span>
                   </label>
-
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={onRemove}
-                    disabled={!selectedId}
-                  >
-                    <Trash2 />
-                    Remove
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 w-full text-xs"
+                  onClick={onRemove}
+                  disabled={!selectedId}
+                >
+                  <Trash2 className="size-3.5" />
+                  Remove
+                </Button>
               </>
             )}
           </CardContent>

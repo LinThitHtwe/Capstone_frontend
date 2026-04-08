@@ -16,11 +16,27 @@ function isMobileViewport() {
   return window.matchMedia("(max-width: 767px)").matches
 }
 
+/** Default `true` avoids one frame where the sidebar is narrow but nav still shows full labels (desktop). */
+function useMediaQuery(query: string, defaultValue = false) {
+  const [matches, setMatches] = React.useState(defaultValue)
+
+  React.useEffect(() => {
+    const mq = window.matchMedia(query)
+    const fn = () => setMatches(mq.matches)
+    fn()
+    mq.addEventListener("change", fn)
+    return () => mq.removeEventListener("change", fn)
+  }, [query])
+
+  return matches
+}
+
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { logout, email } = useAuth()
   const [open, setOpen] = React.useState(true)
   const [hydrated, setHydrated] = React.useState(false)
+  const isMdUp = useMediaQuery("(min-width: 768px)", true)
 
   React.useEffect(() => {
     try {
@@ -51,7 +67,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, [logout, router])
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-svh min-h-0 w-full overflow-hidden bg-background">
       <button
         type="button"
         aria-label="Close sidebar"
@@ -65,13 +81,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <aside
         id="admin-sidebar"
-        aria-hidden={!open}
+        aria-hidden={!open && !isMdUp}
         className={cn(
-          "flex min-w-0 shrink-0 flex-col border-r bg-muted/30 transition-[transform,width,border-color] duration-200 ease-out",
-          "fixed left-0 top-0 z-50 h-full w-60 md:sticky md:top-0 md:z-auto md:h-screen md:min-h-0 md:self-start md:overflow-hidden",
+          "flex min-w-0 shrink-0 flex-col border-r bg-muted/30 transition-[transform,width] duration-200 ease-out",
+          "fixed left-0 top-0 z-50 h-full w-60 overflow-x-hidden md:sticky md:top-0 md:z-auto md:h-screen md:min-h-0 md:self-start md:overflow-hidden",
           open
             ? "translate-x-0 md:w-60"
-            : "-translate-x-full pointer-events-none md:pointer-events-auto md:translate-x-0 md:w-0 md:overflow-hidden md:border-transparent"
+            : "-translate-x-full pointer-events-none md:pointer-events-auto md:translate-x-0 md:w-14"
         )}
       >
         <div className="flex items-center justify-end border-b px-2 py-2 md:hidden">
@@ -86,11 +102,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <PanelLeftClose className="size-4" />
           </Button>
         </div>
-        <AdminSidebarNav onNavigate={afterNav} />
+        <AdminSidebarNav
+          collapsed={!open && isMdUp}
+          onNavigate={afterNav}
+        />
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
           <Button
             type="button"
             variant="outline"
@@ -126,7 +145,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             Log out
           </Button>
         </header>
-        <main className="flex-1 p-6 md:p-8">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain p-6 md:p-8">
+          {children}
+        </main>
       </div>
     </div>
   )

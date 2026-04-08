@@ -40,21 +40,40 @@ function isActive(pathname: string, href: string, exact: boolean) {
 }
 
 type Props = {
+  /** Desktop collapsed rail: icons only (still navigable). */
+  collapsed?: boolean
   /** Called after navigating (e.g. close mobile drawer). */
   onNavigate?: () => void
 }
 
-export function AdminSidebarNav({ onNavigate }: Props) {
+export function AdminSidebarNav({ collapsed = false, onNavigate }: Props) {
   const pathname = usePathname()
 
   return (
     <>
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+      <div
+        className={cn(
+          "flex h-14 shrink-0 items-center border-b",
+          collapsed
+            ? "min-w-0 justify-center overflow-x-hidden px-2"
+            : "gap-2 px-4"
+        )}
+      >
         <LayoutDashboard className="size-5 text-primary" aria-hidden />
-        <span className="font-semibold tracking-tight">Admin</span>
+        <span
+          className={cn(
+            "font-semibold tracking-tight",
+            collapsed && "sr-only"
+          )}
+        >
+          Admin
+        </span>
       </div>
       <nav
-        className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3"
+        className={cn(
+          "flex min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden",
+          collapsed ? "items-center p-2" : "p-3"
+        )}
         aria-label="Admin navigation"
       >
         {nav.map(({ href, label, icon: Icon, exact }) => {
@@ -63,21 +82,28 @@ export function AdminSidebarNav({ onNavigate }: Props) {
             <Link
               key={href}
               href={href}
+              title={label}
+              aria-label={label}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center rounded-md text-sm font-medium transition-colors",
+                collapsed
+                  ? "size-10 min-w-0 max-w-10 shrink-0 justify-center overflow-hidden p-0"
+                  : "gap-2 px-3 py-2",
                 active
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               <Icon className="size-4 shrink-0" aria-hidden />
-              {label}
+              <span className={collapsed ? "sr-only" : undefined}>{label}</span>
             </Link>
           )
         })}
       </nav>
-      <Separator />
+      <Separator
+        className={cn(collapsed && "min-w-0 shrink-0")}
+      />
       
     </>
   )

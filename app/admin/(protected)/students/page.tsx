@@ -23,7 +23,7 @@ const formatter = new Intl.DateTimeFormat(undefined, {
 
 export default function AdminStudentsPage() {
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Students</h1>
         <p className="text-muted-foreground">
