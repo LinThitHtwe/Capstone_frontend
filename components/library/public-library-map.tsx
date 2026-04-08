@@ -30,20 +30,12 @@ export function PublicLibraryMap() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Library map</h1>
-            <p className="text-sm text-muted-foreground">Tables by floor.</p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/login">Login</Link>
-          </Button>
-        </div>
-      </header>
-
+    <div className="min-h-[calc(100vh-3.5rem)] bg-background md:min-h-[calc(100vh-4rem)]">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Library map</h1>
+          <p className="text-sm text-muted-foreground">Tables by floor.</p>
+        </div>
         <LibraryMapExperienceCard variant="public" />
 
         <Card>

@@ -1,14 +1,20 @@
-import type { ReservationRecord } from "@/lib/data/admin-mock"
 import type { AdminTableRecord } from "@/lib/library-map"
 
 export type TableMapStatus = "free" | "reserved" | "occupied"
+
+/** Shape needed to colour the map (matches API + legacy mock rows). */
+export type MapReservationForStatus = {
+  tableNumber: number
+  startTime: string
+  endTime: string
+}
 
 /** Upcoming reservation within this window counts as “reserved” on the map. */
 const UPCOMING_WINDOW_MS = 48 * 60 * 60 * 1000
 
 export function getTableMapStatus(
   table: AdminTableRecord,
-  reservations: ReservationRecord[],
+  reservations: MapReservationForStatus[],
   now: Date
 ): TableMapStatus {
   if (!table.isAvailable) return "occupied"

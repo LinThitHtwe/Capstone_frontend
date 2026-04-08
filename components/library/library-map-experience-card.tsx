@@ -35,12 +35,20 @@ import {
   LIBRARY_MAP_UPDATE_EVENT,
   libraryFloors,
   libraryTileSize,
-  loadLibraryTablesFromLocalStorage,
   tableTypeLabel,
   type AdminTableRecord,
 } from "@/lib/library-map"
-import { mockReservations } from "@/lib/data/admin-mock"
-import { getTableMapStatus, tableMapStatusLabel } from "@/lib/table-map-status"
+import {
+  apiPublicListTables,
+  apiPublicMapReservations,
+  type PublicTable,
+  type PublicMapReservation,
+} from "@/lib/api"
+import {
+  getTableMapStatus,
+  tableMapStatusLabel,
+  type MapReservationForStatus,
+} from "@/lib/table-map-status"
 import { cn } from "@/lib/utils"
 
 const SEATS_PER_TABLE_TYPE = {
@@ -48,6 +56,29 @@ const SEATS_PER_TABLE_TYPE = {
   CIRCULAR: 2,
   FOUR_SEATS: 4,
 } as const
+
+function mapPublicTableToRecord(t: PublicTable): AdminTableRecord {
+  return {
+    id: String(t.id),
+    tableNumber: t.table_number,
+    tableType: t.table_type,
+    libraryFloor: t.library_floor,
+    positionX: t.position_x,
+    positionY: t.position_y,
+    isReservable: t.is_reservable,
+    isAvailable: t.is_available,
+  }
+}
+
+function mapPublicReservationToStatusRow(
+  r: PublicMapReservation
+): MapReservationForStatus {
+  return {
+    tableNumber: r.table_number,
+    startTime: r.start_time,
+    endTime: r.end_time,
+  }
+}
 
 export type LibraryMapExperienceCardProps = {
   variant: "public" | "admin"
@@ -66,8 +97,13 @@ export function LibraryMapExperienceCard({
   const allowReserve = variant === "public"
 
   const [tables, setTables] = React.useState<AdminTableRecord[]>([])
+  const [mapReservations, setMapReservations] = React.useState<
+    MapReservationForStatus[]
+  >([])
   const [floor, setFloor] = React.useState<(typeof libraryFloors)[number]>(1)
   const [hydrated, setHydrated] = React.useState(false)
+  const [initialLoadDone, setInitialLoadDone] = React.useState(false)
+  const [loadError, setLoadError] = React.useState("")
   const [now, setNow] = React.useState(() => new Date())
   const [reservePromptTable, setReservePromptTable] = React.useState<
     number | null
@@ -78,27 +114,46 @@ export function LibraryMapExperienceCard({
     return () => window.clearInterval(id)
   }, [])
 
-  const refresh = React.useCallback(() => {
-    setTables(loadLibraryTablesFromLocalStorage())
+  const loadFromApi = React.useCallback(async () => {
+    setLoadError("")
+    try {
+      const [apiTables, apiRes] = await Promise.all([
+        apiPublicListTables(),
+        apiPublicMapReservations(),
+      ])
+      setTables(apiTables.map(mapPublicTableToRecord))
+      setMapReservations(apiRes.map(mapPublicReservationToStatusRow))
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Failed to load library map")
+      setTables([])
+      setMapReservations([])
+    } finally {
+      setInitialLoadDone(true)
+    }
   }, [])
 
   React.useEffect(() => {
-    refresh()
     setHydrated(true)
-  }, [refresh])
+    void loadFromApi()
+  }, [loadFromApi])
+
+  React.useEffect(() => {
+    const id = window.setInterval(() => void loadFromApi(), 45_000)
+    return () => window.clearInterval(id)
+  }, [loadFromApi])
 
   React.useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === null || e.key === LIBRARY_MAP_STORAGE_KEY) refresh()
+      if (e.key === null || e.key === LIBRARY_MAP_STORAGE_KEY) void loadFromApi()
     }
-    const onCustom = () => refresh()
+    const onCustom = () => void loadFromApi()
     window.addEventListener("storage", onStorage)
     window.addEventListener(LIBRARY_MAP_UPDATE_EVENT, onCustom)
     return () => {
       window.removeEventListener("storage", onStorage)
       window.removeEventListener(LIBRARY_MAP_UPDATE_EVENT, onCustom)
     }
-  }, [refresh])
+  }, [loadFromApi])
 
   const visibleTables = React.useMemo(
     () => tables.filter((t) => t.libraryFloor === floor),
@@ -108,13 +163,13 @@ export function LibraryMapExperienceCard({
   const availableByType = React.useMemo(() => {
     const c = { SINGLE: 0, CIRCULAR: 0, FOUR_SEATS: 0 }
     for (const t of visibleTables) {
-      if (getTableMapStatus(t, mockReservations, now) !== "free") continue
+      if (getTableMapStatus(t, mapReservations, now) !== "free") continue
       if (t.tableType === "CIRCULAR") c.CIRCULAR += 1
       else if (t.tableType === "FOUR_SEATS") c.FOUR_SEATS += 1
       else c.SINGLE += 1
     }
     return c
-  }, [visibleTables, now])
+  }, [visibleTables, now, mapReservations])
 
   const freeTableCount =
     availableByType.SINGLE + availableByType.CIRCULAR + availableByType.FOUR_SEATS
@@ -144,7 +199,7 @@ export function LibraryMapExperienceCard({
       ? `Library map floor ${floor}. Green tables are free to reserve. Drag empty areas horizontally to pan.`
       : `Library map floor ${floor}. Read-only preview. Drag empty areas horizontally to pan.`
 
-  if (!hydrated) {
+  if (!hydrated || !initialLoadDone) {
     return (
       <p className="text-sm text-muted-foreground">
         Loading map…
@@ -160,6 +215,14 @@ export function LibraryMapExperienceCard({
           <CardDescription>{cardDescription}</CardDescription>
         </CardHeader>
         <CardContent>
+          {loadError ? (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {loadError}
+            </p>
+          ) : null}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="inline-flex items-center rounded-lg border bg-background p-1 shadow-sm">
@@ -316,7 +379,7 @@ export function LibraryMapExperienceCard({
 
           <LibraryMapPannableViewport aria-label={mapAria}>
             {visibleTables.map((t) => {
-              const status = getTableMapStatus(t, mockReservations, now)
+              const status = getTableMapStatus(t, mapReservations, now)
               const positionStyle: React.CSSProperties = {
                 left: t.positionX,
                 top: t.positionY,

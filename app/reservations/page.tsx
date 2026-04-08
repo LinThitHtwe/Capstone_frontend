@@ -1,7 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
-
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -37,15 +34,7 @@ export default function StudentReservationsPage() {
   const sorted = getDemoStudentReservationsSorted()
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b px-4 py-4 md:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/">← Home</Link>
-          </Button>
-        </div>
-      </header>
-
+    <div className="min-h-[calc(100vh-3.5rem)] bg-background md:min-h-[calc(100vh-4rem)]">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">

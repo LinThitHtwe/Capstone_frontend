@@ -29,18 +29,7 @@ export default function ReserveTablePage({ searchParams }: PageProps) {
   const tableNumber = parseTableParam(searchParams.table)
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b px-4 py-4 md:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/">← Library map</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/reservations">My reservations</Link>
-          </Button>
-        </div>
-      </header>
-
+    <div className="min-h-[calc(100vh-3.5rem)] bg-background md:min-h-[calc(100vh-4rem)]">
       <main className="mx-auto max-w-lg space-y-6 px-4 py-8 md:px-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">

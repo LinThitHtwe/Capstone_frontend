@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 
 import { AuthProvider } from "@/components/auth/auth-provider"
+import { PublicShell } from "@/components/layout/public-shell"
 
 import "./globals.css"
 
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <PublicShell>{children}</PublicShell>
+        </AuthProvider>
       </body>
     </html>
   )

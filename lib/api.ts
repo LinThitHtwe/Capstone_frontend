@@ -124,6 +124,30 @@ async function parseJson(res: Response): Promise<unknown> {
   return await res.json().catch(() => ({}))
 }
 
+/** Public library map (no auth). Same row shape as admin table without weight_sensor_id. */
+export type PublicTable = Omit<AdminTable, "weight_sensor_id">
+
+export async function apiPublicListTables(): Promise<PublicTable[]> {
+  const res = await fetch(apiUrl("tables/"), { cache: "no-store" })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PublicTable[]
+}
+
+export type PublicMapReservation = {
+  id: number
+  table_number: number
+  start_time: string
+  end_time: string
+}
+
+export async function apiPublicMapReservations(): Promise<PublicMapReservation[]> {
+  const res = await fetch(apiUrl("map-reservations/"), { cache: "no-store" })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PublicMapReservation[]
+}
+
 export async function apiAdminListTables(accessToken: string): Promise<AdminTable[]> {
   const res = await fetch(apiUrl("admin/tables/"), {
     headers: { ...authHeaders(accessToken) },
