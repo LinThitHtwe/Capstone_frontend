@@ -38,6 +38,7 @@ export type SignupBody = {
   password_confirm: string
   name: string
   id_number: string
+  role: string
 }
 
 export type SignupResponse = {
@@ -164,6 +165,183 @@ export async function apiAdminUpdateTable(
 
 export async function apiAdminDeleteTable(accessToken: string, id: number): Promise<void> {
   const res = await fetch(apiUrl(`admin/tables/${id}/`), {
+    method: "DELETE",
+    headers: { ...authHeaders(accessToken) },
+  })
+  if (res.status === 204) return
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+}
+
+export type AdminStudent = {
+  id: number
+  email: string
+  name: string
+  id_number: string
+  date_joined: string
+  is_active: boolean
+}
+
+export type PaginatedResults<T> = {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
+export async function apiAdminListStudents(
+  accessToken: string,
+  params: {
+    page?: number
+    page_size?: number
+    search?: string
+    ordering?: string
+  } = {}
+): Promise<PaginatedResults<AdminStudent>> {
+  const sp = new URLSearchParams()
+  if (params.page != null) sp.set("page", String(params.page))
+  if (params.page_size != null) sp.set("page_size", String(params.page_size))
+  if (params.search) sp.set("search", params.search)
+  if (params.ordering) sp.set("ordering", params.ordering)
+  const q = sp.toString()
+  const path = q ? `admin/students/?${q}` : "admin/students/"
+  const res = await fetch(apiUrl(path), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PaginatedResults<AdminStudent>
+}
+
+export async function apiAdminGetStudent(
+  accessToken: string,
+  id: number
+): Promise<AdminStudent> {
+  const res = await fetch(apiUrl(`admin/students/${id}/`), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminStudent
+}
+
+export type AdminWeightSensor = {
+  id: number
+  location: string
+  last_reading_at: string | null
+  is_available: boolean
+}
+
+export type AdminLCDDisplay = {
+  id: number
+  lcd_type: string
+  table_id: number | null
+  recorded_at: string | null
+  is_available: boolean
+}
+
+export async function apiAdminListWeightSensors(
+  accessToken: string
+): Promise<AdminWeightSensor[]> {
+  const res = await fetch(apiUrl("admin/weight-sensors/"), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminWeightSensor[]
+}
+
+export async function apiAdminCreateWeightSensor(
+  accessToken: string,
+  body: Pick<AdminWeightSensor, "location" | "is_available">
+): Promise<AdminWeightSensor> {
+  const res = await fetch(apiUrl("admin/weight-sensors/"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
+    body: JSON.stringify(body),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminWeightSensor
+}
+
+export async function apiAdminUpdateWeightSensor(
+  accessToken: string,
+  id: number,
+  body: Pick<AdminWeightSensor, "location" | "is_available">
+): Promise<AdminWeightSensor> {
+  const res = await fetch(apiUrl(`admin/weight-sensors/${id}/`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
+    body: JSON.stringify(body),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminWeightSensor
+}
+
+export async function apiAdminDeleteWeightSensor(
+  accessToken: string,
+  id: number
+): Promise<void> {
+  const res = await fetch(apiUrl(`admin/weight-sensors/${id}/`), {
+    method: "DELETE",
+    headers: { ...authHeaders(accessToken) },
+  })
+  if (res.status === 204) return
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+}
+
+export async function apiAdminListLCDDisplays(
+  accessToken: string
+): Promise<AdminLCDDisplay[]> {
+  const res = await fetch(apiUrl("admin/lcd-displays/"), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminLCDDisplay[]
+}
+
+export async function apiAdminCreateLCDDisplay(
+  accessToken: string,
+  body: Pick<AdminLCDDisplay, "lcd_type" | "table_id" | "is_available">
+): Promise<AdminLCDDisplay> {
+  const res = await fetch(apiUrl("admin/lcd-displays/"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
+    body: JSON.stringify(body),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminLCDDisplay
+}
+
+export async function apiAdminUpdateLCDDisplay(
+  accessToken: string,
+  id: number,
+  body: Pick<AdminLCDDisplay, "lcd_type" | "table_id" | "is_available">
+): Promise<AdminLCDDisplay> {
+  const res = await fetch(apiUrl(`admin/lcd-displays/${id}/`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
+    body: JSON.stringify(body),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminLCDDisplay
+}
+
+export async function apiAdminDeleteLCDDisplay(
+  accessToken: string,
+  id: number
+): Promise<void> {
+  const res = await fetch(apiUrl(`admin/lcd-displays/${id}/`), {
     method: "DELETE",
     headers: { ...authHeaders(accessToken) },
   })

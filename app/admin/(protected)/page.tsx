@@ -28,7 +28,7 @@ export default function AdminHomePage() {
   const timelineData = buildReservationsByDay(mockReservations)
 
   return (
-    <div className="w-full max-w-6xl space-y-8">
+    <div className="w-full min-w-0 space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
         <p className="text-muted-foreground">

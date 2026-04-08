@@ -31,7 +31,7 @@ export default function AdminReservationsPage() {
   )
 
   return (
-    <div className="w-full max-w-6xl space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           Reservation history
@@ -40,7 +40,7 @@ export default function AdminReservationsPage() {
           Read-only log. Newest reservations appear first.
         </p>
       </div>
-      <div className="rounded-xl border bg-card shadow-sm">
+      <div className="w-full min-w-0 rounded-xl border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

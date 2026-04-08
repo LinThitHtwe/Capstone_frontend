@@ -1,9 +1,12 @@
-import type { Metadata } from "next"
+"use client"
+
+import * as React from "react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { useParams } from "next/navigation"
 
 import { ArrowLeft } from "lucide-react"
 
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -12,12 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { mockStudents } from "@/lib/data/admin-mock"
-
-export const metadata: Metadata = {
-  title: "Student details",
-  description: "View student details",
-}
+import { apiAdminGetStudent, type AdminStudent } from "@/lib/api"
 
 function Field({
   label,
@@ -39,18 +37,60 @@ const formatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 })
 
-export default async function AdminStudentDetailsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
+export default function AdminStudentDetailsPage() {
+  const params = useParams()
+  const idParam = params.id
+  const idStr = Array.isArray(idParam) ? idParam[0] : idParam
+  const idNum = idStr ? Number(idStr) : NaN
 
-  const s = mockStudents.find((x) => x.id === id)
-  if (!s) notFound()
+  const { accessToken } = useAuth()
+  const [student, setStudent] = React.useState<AdminStudent | null>(null)
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState("")
+
+  React.useEffect(() => {
+    if (!accessToken || !Number.isFinite(idNum)) {
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    async function run() {
+      setLoading(true)
+      setError("")
+      try {
+        const data = await apiAdminGetStudent(accessToken, idNum)
+        if (!cancelled) setStudent(data)
+      } catch (e) {
+        if (!cancelled) {
+          setStudent(null)
+          setError(e instanceof Error ? e.message : "Failed to load student")
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, idNum])
+
+  if (!Number.isFinite(idNum)) {
+    return (
+      <div className="w-full min-w-0 space-y-6">
+        <Button asChild variant="ghost" size="sm" className="-ml-2 w-fit">
+          <Link href="/admin/students">
+            <ArrowLeft />
+            Students
+          </Link>
+        </Button>
+        <p className="text-sm text-destructive">Invalid student id.</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="w-full max-w-3xl space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div className="space-y-2">
         <Button asChild variant="ghost" size="sm" className="-ml-2 w-fit">
           <Link href="/admin/students">
@@ -59,33 +99,52 @@ export default async function AdminStudentDetailsPage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{s.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {loading ? "Loading…" : student?.name ?? "Student"}
+          </h1>
           <p className="text-muted-foreground">
-            Demo-only details view (replace with API later).
+            Profile from the library member account.
           </p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>User</CardTitle>
-          <CardDescription>Backend-aligned fields from `User`.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-5 sm:grid-cols-2">
-          <Field label="ID" value={<span className="font-mono text-xs">{s.id}</span>} />
-          <Field label="Active" value={s.isActive ? "Yes" : "No"} />
-          <Field label="Email" value={s.email} />
-          <Field label="Role" value={<span className="capitalize">{s.role}</span>} />
-          <Field
-            label="ID number"
-            value={<span className="font-mono text-xs">{s.idNumber}</span>}
-          />
-          <Field
-            label="Date joined"
-            value={formatter.format(new Date(s.dateJoined))}
-          />
-        </CardContent>
-      </Card>
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {error}
+        </div>
+      ) : null}
+
+      {!loading && student ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Account</CardTitle>
+            <CardDescription>Fields stored on the User model.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-5 sm:grid-cols-2">
+            <Field
+              label="ID"
+              value={<span className="font-mono text-xs">{student.id}</span>}
+            />
+            <Field
+              label="Active"
+              value={student.is_active ? "Yes" : "No"}
+            />
+            <Field label="Email" value={student.email} />
+            <Field label="Name" value={student.name} />
+            <Field
+              label="ID number"
+              value={<span className="font-mono text-xs">{student.id_number}</span>}
+            />
+            <Field
+              label="Date joined"
+              value={formatter.format(new Date(student.date_joined))}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   )
 }

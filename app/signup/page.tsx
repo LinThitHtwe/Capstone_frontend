@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { apiLogin, apiSignup } from "@/lib/api"
+import { SIGNUP_ROLES, type SignupRole } from "@/lib/auth-config"
+import { postLoginRedirectPath } from "@/lib/post-login-redirect"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -25,6 +27,7 @@ export default function SignUpPage() {
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [confirmPassword, setConfirmPassword] = React.useState("")
+  const [role, setRole] = React.useState<SignupRole>("student")
   const [error, setError] = React.useState("")
   const [pending, setPending] = React.useState(false)
 
@@ -45,10 +48,11 @@ export default function SignUpPage() {
         password_confirm: confirmPassword,
         name,
         id_number: idNumber,
+        role,
       })
       const tokens = await apiLogin(email, password)
       setTokens(tokens.access, tokens.refresh)
-      router.push("/")
+      router.replace(postLoginRedirectPath(tokens.user.role, null))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign up failed")
     } finally {
@@ -73,8 +77,8 @@ export default function SignUpPage() {
               Create account
             </CardTitle>
             <CardDescription>
-              Register for library access. Admin accounts cannot be created
-              here.
+              Register for library access. Choose your role; admin accounts are
+              not created here.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -102,12 +106,30 @@ export default function SignUpPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-id">Student / staff ID</Label>
+                <Label htmlFor="signup-role">Role</Label>
+                <select
+                  id="signup-role"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as SignupRole)}
+                  required
+                  aria-label="Account role"
+                >
+                  {SIGNUP_ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-id">ID number</Label>
                 <Input
                   id="signup-id"
                   type="text"
                   autoComplete="off"
-                  placeholder="e.g. STU12345"
+                  placeholder="Student, staff, or visitor ID"
                   value={idNumber}
                   onChange={(e) => setIdNumber(e.target.value)}
                   required
