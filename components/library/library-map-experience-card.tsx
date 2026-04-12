@@ -214,7 +214,7 @@ export function LibraryMapExperienceCard({
           <CardTitle>{cardTitle}</CardTitle>
           <CardDescription>{cardDescription}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-w-0">
           {loadError ? (
             <p
               role="alert"

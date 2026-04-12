@@ -1,9 +1,12 @@
-import type { Metadata } from "next"
+"use client"
+
+import * as React from "react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { useParams } from "next/navigation"
 
 import { ArrowLeft } from "lucide-react"
 
+import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -12,12 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { mockStudents } from "@/lib/data/admin-mock"
-
-export const metadata: Metadata = {
-  title: "Staff details",
-  description: "View staff details",
-}
+import { apiAdminGetStaff, type AdminStudent } from "@/lib/api"
 
 function Field({
   label,
@@ -39,15 +37,58 @@ const formatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 })
 
-export default async function AdminStaffDetailsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
+export default function AdminStaffDetailsPage() {
+  const params = useParams()
+  const idParam = params.id
+  const idStr = Array.isArray(idParam) ? idParam[0] : idParam
+  const idNum = idStr ? Number(idStr) : NaN
 
-  const s = mockStudents.find((x) => x.id === id && x.role === "staff")
-  if (!s) notFound()
+  const { accessToken } = useAuth()
+  const [user, setUser] = React.useState<AdminStudent | null>(null)
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState("")
+
+  React.useEffect(() => {
+    if (!accessToken || !Number.isFinite(idNum)) {
+      setLoading(false)
+      return
+    }
+    const token = accessToken
+    let cancelled = false
+    async function run() {
+      setLoading(true)
+      setError("")
+      try {
+        const data = await apiAdminGetStaff(token, idNum)
+        if (!cancelled) setUser(data)
+      } catch (e) {
+        if (!cancelled) {
+          setUser(null)
+          setError(e instanceof Error ? e.message : "Failed to load staff")
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, idNum])
+
+  if (!Number.isFinite(idNum)) {
+    return (
+      <div className="w-full min-w-0 space-y-6">
+        <Button asChild variant="ghost" size="sm" className="-ml-2 w-fit">
+          <Link href="/admin/staff">
+            <ArrowLeft />
+            Staff
+          </Link>
+        </Button>
+        <p className="text-sm text-destructive">Invalid staff id.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full min-w-0 space-y-6">
@@ -59,33 +100,53 @@ export default async function AdminStaffDetailsPage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{s.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {loading ? "Loading…" : user?.name ?? "Staff"}
+          </h1>
           <p className="text-muted-foreground">
-            Demo-only details view (replace with API later).
+            Profile from the library staff account.
           </p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>User</CardTitle>
-          <CardDescription>Backend-aligned fields from `User`.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-5 sm:grid-cols-2">
-          <Field label="ID" value={<span className="font-mono text-xs">{s.id}</span>} />
-          <Field label="Active" value={s.isActive ? "Yes" : "No"} />
-          <Field label="Email" value={s.email} />
-          <Field label="Role" value={<span className="capitalize">{s.role}</span>} />
-          <Field
-            label="ID number"
-            value={<span className="font-mono text-xs">{s.idNumber}</span>}
-          />
-          <Field
-            label="Date joined"
-            value={formatter.format(new Date(s.dateJoined))}
-          />
-        </CardContent>
-      </Card>
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {error}
+        </div>
+      ) : null}
+
+      {!loading && user ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Account</CardTitle>
+            <CardDescription>Fields stored on the User model.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-5 sm:grid-cols-2">
+            <Field
+              label="ID"
+              value={<span className="font-mono text-xs">{user.id}</span>}
+            />
+            <Field
+              label="Active"
+              value={user.is_active ? "Yes" : "No"}
+            />
+            <Field label="Email" value={user.email} />
+            <Field label="Name" value={user.name} />
+            <Field label="Role" value={<span className="capitalize">staff</span>} />
+            <Field
+              label="ID number"
+              value={<span className="font-mono text-xs">{user.id_number}</span>}
+            />
+            <Field
+              label="Date joined"
+              value={formatter.format(new Date(user.date_joined))}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   )
 }

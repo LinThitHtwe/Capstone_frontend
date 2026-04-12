@@ -53,12 +53,13 @@ export default function AdminStudentDetailsPage() {
       setLoading(false)
       return
     }
+    const token = accessToken
     let cancelled = false
     async function run() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiAdminGetStudent(accessToken, idNum)
+        const data = await apiAdminGetStudent(token, idNum)
         if (!cancelled) setStudent(data)
       } catch (e) {
         if (!cancelled) {

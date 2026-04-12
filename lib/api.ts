@@ -251,6 +251,120 @@ export async function apiAdminGetStudent(
   return data as AdminStudent
 }
 
+export async function apiAdminListStaff(
+  accessToken: string,
+  params: {
+    page?: number
+    page_size?: number
+    search?: string
+    ordering?: string
+  } = {}
+): Promise<PaginatedResults<AdminStudent>> {
+  const sp = new URLSearchParams()
+  if (params.page != null) sp.set("page", String(params.page))
+  if (params.page_size != null) sp.set("page_size", String(params.page_size))
+  if (params.search) sp.set("search", params.search)
+  if (params.ordering) sp.set("ordering", params.ordering)
+  const q = sp.toString()
+  const path = q ? `admin/staff/?${q}` : "admin/staff/"
+  const res = await fetch(apiUrl(path), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PaginatedResults<AdminStudent>
+}
+
+export async function apiAdminGetStaff(
+  accessToken: string,
+  id: number
+): Promise<AdminStudent> {
+  const res = await fetch(apiUrl(`admin/staff/${id}/`), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminStudent
+}
+
+export async function apiAdminListLecturers(
+  accessToken: string,
+  params: {
+    page?: number
+    page_size?: number
+    search?: string
+    ordering?: string
+  } = {}
+): Promise<PaginatedResults<AdminStudent>> {
+  const sp = new URLSearchParams()
+  if (params.page != null) sp.set("page", String(params.page))
+  if (params.page_size != null) sp.set("page_size", String(params.page_size))
+  if (params.search) sp.set("search", params.search)
+  if (params.ordering) sp.set("ordering", params.ordering)
+  const q = sp.toString()
+  const path = q ? `admin/lecturers/?${q}` : "admin/lecturers/"
+  const res = await fetch(apiUrl(path), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PaginatedResults<AdminStudent>
+}
+
+export async function apiAdminGetLecturer(
+  accessToken: string,
+  id: number
+): Promise<AdminStudent> {
+  const res = await fetch(apiUrl(`admin/lecturers/${id}/`), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminStudent
+}
+
+export async function apiAdminListVisitors(
+  accessToken: string,
+  params: {
+    page?: number
+    page_size?: number
+    search?: string
+    ordering?: string
+  } = {}
+): Promise<PaginatedResults<AdminStudent>> {
+  const sp = new URLSearchParams()
+  if (params.page != null) sp.set("page", String(params.page))
+  if (params.page_size != null) sp.set("page_size", String(params.page_size))
+  if (params.search) sp.set("search", params.search)
+  if (params.ordering) sp.set("ordering", params.ordering)
+  const q = sp.toString()
+  const path = q ? `admin/visitors/?${q}` : "admin/visitors/"
+  const res = await fetch(apiUrl(path), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PaginatedResults<AdminStudent>
+}
+
+export async function apiAdminGetVisitor(
+  accessToken: string,
+  id: number
+): Promise<AdminStudent> {
+  const res = await fetch(apiUrl(`admin/visitors/${id}/`), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminStudent
+}
+
 export type AdminWeightSensor = {
   id: number
   location: string

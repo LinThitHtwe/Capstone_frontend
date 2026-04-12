@@ -14,7 +14,10 @@ import {
 } from "lucide-react"
 
 import { useAuth } from "@/components/auth/auth-provider"
-import { LibraryMapPannableViewport } from "@/components/library/library-map-pannable-viewport"
+import {
+  LibraryMapPannableViewport,
+  type LibraryMapViewportHandle,
+} from "@/components/library/library-map-pannable-viewport"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -66,6 +69,11 @@ function clamp(n: number, min: number, max: number) {
 
 function snap(n: number) {
   return Math.round(n / grid) * grid
+}
+
+/** Snap to grid, then clamp so the tile never extends past the map (snap can round past max). */
+function snapPosition(n: number, min: number, max: number) {
+  return clamp(snap(n), min, max)
 }
 
 function isOverlapping(
@@ -448,10 +456,11 @@ export default function AdminTablesPage() {
     setTables(next)
   }, [tables])
 
+  const mapViewportRef = React.useRef<LibraryMapViewportHandle | null>(null)
+
   const dragState = React.useRef<{
     id: string
-    startX: number
-    startY: number
+    startWorld: { x: number; y: number }
     baseX: number
     baseY: number
   } | null>(null)
@@ -461,10 +470,14 @@ export default function AdminTablesPage() {
       const el = e.currentTarget as HTMLElement
       el.setPointerCapture(e.pointerId)
       setSelectedId(t.id)
+      const w =
+        mapViewportRef.current?.clientToWorld(e.clientX, e.clientY) ?? {
+          x: 0,
+          y: 0,
+        }
       dragState.current = {
         id: t.id,
-        startX: e.clientX,
-        startY: e.clientY,
+        startWorld: w,
         baseX: t.positionX,
         baseY: t.positionY,
       }
@@ -475,10 +488,13 @@ export default function AdminTablesPage() {
   const handlePointerMove = React.useCallback((e: React.PointerEvent) => {
     if (!dragState.current) return
     const s = dragState.current
-    const dx = e.clientX - s.startX
-    const dy = e.clientY - s.startY
-    const x = snap(clamp(s.baseX + dx, 0, mapSize.w - tileSize.w))
-    const y = snap(clamp(s.baseY + dy, 0, mapSize.h - tileSize.h))
+    const api = mapViewportRef.current
+    if (!api) return
+    const w = api.worldPointWithDragAutoscroll(e.clientX, e.clientY)
+    const dx = w.x - s.startWorld.x
+    const dy = w.y - s.startWorld.y
+    const x = snapPosition(s.baseX + dx, 0, mapSize.w - tileSize.w)
+    const y = snapPosition(s.baseY + dy, 0, mapSize.h - tileSize.h)
     setTables((prev) => {
       const moving = prev.find((t) => t.id === s.id)
       if (!moving) return prev
@@ -566,16 +582,17 @@ export default function AdminTablesPage() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-[1fr_13.5rem] lg:grid-rows-[minmax(0,1fr)] lg:items-start lg:gap-5 lg:overflow-hidden">
+      <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_13.5rem] lg:grid-rows-[minmax(0,1fr)] lg:items-start lg:gap-5 lg:overflow-hidden">
         <Card className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:min-h-0 lg:h-full lg:self-stretch">
           <CardHeader className="shrink-0">
             <CardTitle>Library top view</CardTitle>
             <CardDescription>
-              Drag tiles to reposition. When the map is larger than the frame,
-              scroll or drag empty space to pan. Editing floor {floor}.
+              Drag tiles to reposition. When the map is wider than the frame,
+              drag empty space to pan, use Shift+scroll (or horizontal wheel), or
+              drag a table near the edge to auto-pan. Editing floor {floor}.
             </CardDescription>
           </CardHeader>
-          <CardContent className="min-h-0 flex-1 overflow-y-auto">
+          <CardContent className="min-h-0 min-w-0 flex-1 overflow-y-auto">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <div className="inline-flex items-center rounded-lg border bg-background p-1 shadow-sm">
@@ -607,11 +624,9 @@ export default function AdminTablesPage() {
               </div>
             </div>
             <LibraryMapPannableViewport
+              ref={mapViewportRef}
               aria-label={`Admin library map, floor ${floor}. Drag tiles to move, or drag empty area to pan.`}
-              overflowHintText="Scroll or drag sideways · drag tiles to move"
-              onScrollAreaPointerMove={handlePointerMove}
-              onScrollAreaPointerUp={handlePointerUp}
-              onScrollAreaPointerCancel={handlePointerUp}
+              overflowHintText="Drag empty space · Shift+scroll sideways · drag table near edge to pan"
             >
               {visibleTables.map((t) => {
                 const active = t.id === selectedId
@@ -623,6 +638,9 @@ export default function AdminTablesPage() {
                     tabIndex={0}
                     aria-label={`Table ${t.tableNumber}`}
                     onPointerDown={(e) => handlePointerDown(e, t)}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
                     className={cn(
                       "absolute select-none rounded-lg border px-1.5 py-1 shadow-sm outline-none",
                       "cursor-grab active:cursor-grabbing",

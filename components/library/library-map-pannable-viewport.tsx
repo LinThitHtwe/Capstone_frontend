@@ -1,21 +1,33 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsLeftRight, DoorOpen } from "lucide-react"
+import { ArrowUp, ChevronsLeftRight, DoorOpen } from "lucide-react"
 
 import { libraryMapSize } from "@/lib/library-map"
 import { cn } from "@/lib/utils"
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n))
+}
+
+export type LibraryMapViewportHandle = {
+  /** Map coordinates (same space as table `positionX` / `positionY`). */
+  clientToWorld: (clientX: number, clientY: number) => { x: number; y: number }
+  /**
+   * During tile drag: nudge horizontal pan when the pointer is near the viewport edge,
+   * then return the world point. Pan and coordinates stay in sync (no scrollLeft).
+   */
+  worldPointWithDragAutoscroll: (
+    clientX: number,
+    clientY: number
+  ) => { x: number; y: number }
+}
 
 type LibraryMapPannableViewportProps = {
   children: React.ReactNode
   className?: string
   "aria-label"?: string
-  /** Shown when the map overflows horizontally (default). */
   overflowHintText?: string
-  /** Forwarded to the scroll container (e.g. admin table drag move/up). */
-  onScrollAreaPointerMove?: React.PointerEventHandler<HTMLDivElement>
-  onScrollAreaPointerUp?: React.PointerEventHandler<HTMLDivElement>
-  onScrollAreaPointerCancel?: React.PointerEventHandler<HTMLDivElement>
 }
 
 function isPanExemptTarget(target: EventTarget | null) {
@@ -25,21 +37,30 @@ function isPanExemptTarget(target: EventTarget | null) {
   )
 }
 
+const mapW = libraryMapSize.w
+const mapH = libraryMapSize.h
+
 /**
- * Map frame: inner surface is fixed library pixels (900×wide × full height).
- * Height matches the map so there is no vertical in-frame scroll — only horizontal
- * scroll / drag-pan. Skips pan for `button`, `[role="button"]`, `[data-skip-map-pan]`.
+ * Horizontal pan uses CSS transform (not overflow scroll) so map coordinates are always
+ * `world = viewportLocal + panX` and tile dragging cannot desync from the viewport.
  */
-export function LibraryMapPannableViewport({
-  children,
-  className,
-  "aria-label": ariaLabel,
-  overflowHintText = "Scroll or drag sideways to pan",
-  onScrollAreaPointerMove,
-  onScrollAreaPointerUp,
-  onScrollAreaPointerCancel,
-}: LibraryMapPannableViewportProps) {
-  const scrollRef = React.useRef<HTMLDivElement>(null)
+export const LibraryMapPannableViewport = React.forwardRef<
+  LibraryMapViewportHandle,
+  LibraryMapPannableViewportProps
+>(function LibraryMapPannableViewport(
+  {
+    children,
+    className,
+    "aria-label": ariaLabel,
+    overflowHintText = "Scroll or drag sideways to pan",
+  },
+  ref
+) {
+  const viewportRef = React.useRef<HTMLDivElement | null>(null)
+  const viewportWRef = React.useRef(0)
+  const panXRef = React.useRef(0)
+  const [panX, setPanX] = React.useState(0)
+
   const dragRef = React.useRef({
     active: false,
     pointerId: -1,
@@ -49,46 +70,106 @@ export function LibraryMapPannableViewport({
   const [edges, setEdges] = React.useState({ left: false, right: false })
   const [hasOverflow, setHasOverflow] = React.useState(false)
 
-  const mapH = libraryMapSize.h
-
-  const updateScrollIndicators = React.useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const { scrollLeft, clientWidth, scrollWidth } = el
-    const eps = 3
-    const overflowX = scrollWidth > clientWidth + eps
-    setHasOverflow(overflowX)
-    setEdges({
-      left: overflowX && scrollLeft > eps,
-      right: overflowX && scrollLeft + clientWidth < scrollWidth - eps,
-    })
+  const maxPanX = React.useCallback(() => {
+    const vw = viewportWRef.current
+    return Math.max(0, mapW - vw)
   }, [])
 
+  const setPanClamped = React.useCallback((next: number) => {
+    const max = maxPanX()
+    const px = clamp(next, 0, max)
+    panXRef.current = px
+    setPanX(px)
+  }, [maxPanX])
+
+  const readWorld = React.useCallback((clientX: number, clientY: number) => {
+    const vp = viewportRef.current
+    if (!vp) return { x: 0, y: 0 }
+    const rect = vp.getBoundingClientRect()
+    const lx = clientX - rect.left
+    const ly = clientY - rect.top
+    return { x: lx + panXRef.current, y: ly }
+  }, [])
+
+  const autoscrollThenWorld = React.useCallback(
+    (clientX: number, clientY: number) => {
+      const vp = viewportRef.current
+      if (!vp) return { x: 0, y: 0 }
+      const rect = vp.getBoundingClientRect()
+      const zone = 80
+      let px = panXRef.current
+      const max = maxPanX()
+      const cx = clientX
+      if (cx > rect.right - zone) {
+        const over = cx - (rect.right - zone)
+        px += Math.min(72, 10 + over * 0.55)
+      } else if (cx < rect.left + zone) {
+        const over = rect.left + zone - cx
+        px -= Math.min(72, 10 + over * 0.55)
+      }
+      px = clamp(px, 0, max)
+      if (px !== panXRef.current) {
+        panXRef.current = px
+        setPanX(px)
+      }
+      const lx = clientX - rect.left
+      const ly = clientY - rect.top
+      return { x: lx + panXRef.current, y: ly }
+    },
+    [maxPanX]
+  )
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      clientToWorld: readWorld,
+      worldPointWithDragAutoscroll: autoscrollThenWorld,
+    }),
+    [readWorld, autoscrollThenWorld]
+  )
+
+  const updateEdges = React.useCallback(() => {
+    const max = maxPanX()
+    const eps = 2
+    const overflowX = max > eps
+    const px = panXRef.current
+    setHasOverflow(overflowX)
+    setEdges({
+      left: overflowX && px > eps,
+      right: overflowX && px < max - eps,
+    })
+  }, [maxPanX])
+
   React.useLayoutEffect(() => {
-    updateScrollIndicators()
-    const el = scrollRef.current
-    if (!el) return
+    const vp = viewportRef.current
+    if (!vp) return
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect
+      if (cr) viewportWRef.current = cr.width
+      const max = Math.max(0, mapW - viewportWRef.current)
+      if (panXRef.current > max) {
+        panXRef.current = max
+        setPanX(max)
+      }
+      updateEdges()
+    })
+    ro.observe(vp)
+    viewportWRef.current = vp.getBoundingClientRect().width
+    updateEdges()
+    return () => ro.disconnect()
+  }, [updateEdges])
 
-    el.addEventListener("scroll", updateScrollIndicators, { passive: true })
-    const ro = new ResizeObserver(updateScrollIndicators)
-    ro.observe(el)
-
-    return () => {
-      el.removeEventListener("scroll", updateScrollIndicators)
-      ro.disconnect()
-    }
-  }, [updateScrollIndicators])
+  React.useLayoutEffect(() => {
+    updateEdges()
+  }, [panX, updateEdges])
 
   const endPan = React.useCallback((pointerId?: number) => {
     const d = dragRef.current
     if (!d.active) return
     d.active = false
     setPanning(false)
-    const node = scrollRef.current
-    if (
-      pointerId != null &&
-      node?.hasPointerCapture?.(pointerId)
-    ) {
+    const node = viewportRef.current
+    if (pointerId != null && node?.hasPointerCapture?.(pointerId)) {
       node.releasePointerCapture(pointerId)
     }
   }, [])
@@ -97,7 +178,7 @@ export function LibraryMapPannableViewport({
     if (e.button !== 0) return
     if (isPanExemptTarget(e.target)) return
 
-    const node = scrollRef.current
+    const node = viewportRef.current
     if (!node) return
 
     dragRef.current = {
@@ -110,34 +191,42 @@ export function LibraryMapPannableViewport({
   }
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    onScrollAreaPointerMove?.(e)
     const d = dragRef.current
     if (!d.active || e.pointerId !== d.pointerId) return
-    const node = scrollRef.current
-    if (!node) return
 
     const dx = e.clientX - d.x
     d.x = e.clientX
-    node.scrollLeft -= dx
-    updateScrollIndicators()
+    setPanClamped(panXRef.current - dx)
+    updateEdges()
   }
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    onScrollAreaPointerUp?.(e)
     if (dragRef.current.pointerId === e.pointerId) {
       endPan(e.pointerId)
     }
   }
 
   const onPointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
-    onScrollAreaPointerCancel?.(e)
     if (dragRef.current.pointerId === e.pointerId) {
       endPan(e.pointerId)
     }
   }
 
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const delta =
+      e.deltaX !== 0
+        ? e.deltaX
+        : e.shiftKey
+          ? e.deltaY
+          : 0
+    if (delta === 0) return
+    e.preventDefault()
+    setPanClamped(panXRef.current + delta)
+    updateEdges()
+  }
+
   React.useEffect(() => {
-    const node = scrollRef.current
+    const node = viewportRef.current
     if (!node) return
     const onLost = () => endPan()
     node.addEventListener("lostpointercapture", onLost)
@@ -145,55 +234,56 @@ export function LibraryMapPannableViewport({
   }, [endPan])
 
   return (
-    <div className="relative w-full max-w-full">
+    <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm">
       <div
-        ref={scrollRef}
+        ref={viewportRef}
         role="region"
         aria-label={ariaLabel}
         className={cn(
-          "w-full overflow-x-auto overflow-y-hidden rounded-xl border bg-muted/20",
-          "overscroll-x-contain [scrollbar-width:thin]",
-          "cursor-grab",
+          "min-w-0 w-full cursor-grab overflow-hidden",
           panning && "cursor-grabbing select-none",
           className
         )}
         style={{
           height: mapH,
-          touchAction: panning ? "none" : "pan-x",
+          touchAction: "none",
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
+        onWheel={onWheel}
       >
         <div
-          className="relative shrink-0"
+          className="relative will-change-transform"
           style={{
-            width: libraryMapSize.w,
-            height: libraryMapSize.h,
+            width: mapW,
+            height: mapH,
+            transform: `translate3d(${-panX}px, 0, 0)`,
           }}
         >
           {children}
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] flex flex-col items-center justify-end border-t border-dashed border-primary/35 bg-gradient-to-t from-background/95 via-background/80 to-transparent pb-1.5 pt-4"
-            role="note"
-          >
-            <span className="sr-only">
-              Map orientation: the bottom edge of this floor plan is the library
-              entrance. Use it to tell front from back when choosing a table.
+        </div>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[6]">
+        <span className="sr-only">
+          Map orientation: the bottom edge of this floor plan is the library
+          entrance.
+        </span>
+        <div className="h-14 bg-gradient-to-t from-background/90 via-background/50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-2 flex items-center justify-center px-3">
+          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-foreground px-3 py-1.5 text-background ring-1 ring-border/40 sm:gap-2.5 sm:px-3.5">
+            <span
+              className="flex shrink-0 items-center gap-0.5 rounded-full bg-background/10 px-2 py-1 ring-1 ring-background/10"
+              aria-hidden
+            >
+              <DoorOpen className="size-4 text-background sm:size-[1.125rem]" />
+              <ArrowUp className="size-3.5 text-background/90 sm:size-4" />
             </span>
-            <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/90 px-2.5 py-1 shadow-sm ring-1 ring-border/40">
-              <DoorOpen
-                className="size-3.5 shrink-0 text-primary"
-                aria-hidden
-              />
-              <span className="text-[11px] font-semibold tracking-tight text-foreground sm:text-xs">
-                Entrance
-              </span>
-              <span className="hidden text-[10px] text-muted-foreground sm:inline">
-                · bottom of map
-              </span>
-            </div>
+            <span className="whitespace-nowrap text-[12px] font-semibold tracking-tight sm:text-sm">
+              Library entrance
+            </span>
           </div>
         </div>
       </div>
@@ -221,4 +311,6 @@ export function LibraryMapPannableViewport({
       ) : null}
     </div>
   )
-}
+})
+
+LibraryMapPannableViewport.displayName = "LibraryMapPannableViewport"

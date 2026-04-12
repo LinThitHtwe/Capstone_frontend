@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { apiAdminGetLecturer, type AdminStudent } from "@/lib/api"
+import { apiAdminGetVisitor, type AdminStudent } from "@/lib/api"
 
 function Field({
   label,
@@ -37,7 +37,7 @@ const formatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 })
 
-export default function AdminLecturerDetailsPage() {
+export default function AdminVisitorDetailsPage() {
   const params = useParams()
   const idParam = params.id
   const idStr = Array.isArray(idParam) ? idParam[0] : idParam
@@ -59,12 +59,12 @@ export default function AdminLecturerDetailsPage() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiAdminGetLecturer(token, idNum)
+        const data = await apiAdminGetVisitor(token, idNum)
         if (!cancelled) setUser(data)
       } catch (e) {
         if (!cancelled) {
           setUser(null)
-          setError(e instanceof Error ? e.message : "Failed to load lecturer")
+          setError(e instanceof Error ? e.message : "Failed to load visitor")
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -80,12 +80,12 @@ export default function AdminLecturerDetailsPage() {
     return (
       <div className="w-full min-w-0 space-y-6">
         <Button asChild variant="ghost" size="sm" className="-ml-2 w-fit">
-          <Link href="/admin/lecturers">
+          <Link href="/admin/visitors">
             <ArrowLeft />
-            Lecturers
+            Visitors
           </Link>
         </Button>
-        <p className="text-sm text-destructive">Invalid lecturer id.</p>
+        <p className="text-sm text-destructive">Invalid visitor id.</p>
       </div>
     )
   }
@@ -94,17 +94,17 @@ export default function AdminLecturerDetailsPage() {
     <div className="w-full min-w-0 space-y-6">
       <div className="space-y-2">
         <Button asChild variant="ghost" size="sm" className="-ml-2 w-fit">
-          <Link href="/admin/lecturers">
+          <Link href="/admin/visitors">
             <ArrowLeft />
-            Lecturers
+            Visitors
           </Link>
         </Button>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            {loading ? "Loading…" : user?.name ?? "Lecturer"}
+            {loading ? "Loading…" : user?.name ?? "Visitor"}
           </h1>
           <p className="text-muted-foreground">
-            Profile from the library lecturer account.
+            Profile from the library visitor account.
           </p>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function AdminLecturerDetailsPage() {
             <Field label="Name" value={user.name} />
             <Field
               label="Role"
-              value={<span className="capitalize">lecturer</span>}
+              value={<span className="capitalize">visitor</span>}
             />
             <Field
               label="ID number"
