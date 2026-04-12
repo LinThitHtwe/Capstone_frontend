@@ -83,8 +83,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         id="admin-sidebar"
         aria-hidden={!open && !isMdUp}
         className={cn(
-          "flex min-w-0 shrink-0 flex-col border-r bg-muted/30 transition-[transform,width] duration-200 ease-out",
-          "fixed left-0 top-0 z-50 h-full w-60 overflow-x-hidden md:sticky md:top-0 md:z-auto md:h-screen md:min-h-0 md:self-start md:overflow-hidden",
+          "flex min-h-0 min-w-0 shrink-0 flex-col border-r bg-muted/30 transition-[transform,width] duration-200 ease-out",
+          // Mobile: overlay drawer. Desktop: column in the row — stretch with shell height so
+          // only <main> scrolls; sidebar does not move with page content.
+          "fixed left-0 top-0 z-50 h-full max-h-svh w-60 overflow-x-hidden md:relative md:top-auto md:z-auto md:h-full md:max-h-none md:translate-x-0 md:overflow-hidden",
           open
             ? "translate-x-0 md:w-60"
             : "-translate-x-full pointer-events-none md:pointer-events-auto md:translate-x-0 md:w-14"
@@ -108,7 +110,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         />
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
           <Button
             type="button"

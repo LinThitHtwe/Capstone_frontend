@@ -28,6 +28,11 @@ type LibraryMapPannableViewportProps = {
   className?: string
   "aria-label"?: string
   overflowHintText?: string
+  /**
+   * `overlay` pins the pan hint on the map (public view).
+   * `below` renders the hint under the map so it does not cover tiles (admin editor).
+   */
+  overflowHintPlacement?: "overlay" | "below"
 }
 
 function isPanExemptTarget(target: EventTarget | null) {
@@ -53,6 +58,7 @@ export const LibraryMapPannableViewport = React.forwardRef<
     className,
     "aria-label": ariaLabel,
     overflowHintText = "Scroll or drag sideways to pan",
+    overflowHintPlacement = "overlay",
   },
   ref
 ) {
@@ -143,20 +149,30 @@ export const LibraryMapPannableViewport = React.forwardRef<
   React.useLayoutEffect(() => {
     const vp = viewportRef.current
     if (!vp) return
-    const ro = new ResizeObserver((entries) => {
-      const cr = entries[0]?.contentRect
-      if (cr) viewportWRef.current = cr.width
+
+    const measure = () => {
+      viewportWRef.current = vp.getBoundingClientRect().width
       const max = Math.max(0, mapW - viewportWRef.current)
       if (panXRef.current > max) {
         panXRef.current = max
         setPanX(max)
       }
       updateEdges()
+    }
+
+    const ro = new ResizeObserver(() => {
+      measure()
     })
     ro.observe(vp)
-    viewportWRef.current = vp.getBoundingClientRect().width
-    updateEdges()
-    return () => ro.disconnect()
+    const parent = vp.parentElement
+    if (parent) ro.observe(parent)
+
+    measure()
+    window.addEventListener("resize", measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("resize", measure)
+    }
   }, [updateEdges])
 
   React.useLayoutEffect(() => {
@@ -233,81 +249,101 @@ export const LibraryMapPannableViewport = React.forwardRef<
     return () => node.removeEventListener("lostpointercapture", onLost)
   }, [endPan])
 
-  return (
-    <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm">
-      <div
-        ref={viewportRef}
-        role="region"
-        aria-label={ariaLabel}
-        className={cn(
-          "min-w-0 w-full cursor-grab overflow-hidden",
-          panning && "cursor-grabbing select-none",
-          className
-        )}
-        style={{
-          height: mapH,
-          touchAction: "none",
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onWheel={onWheel}
-      >
-        <div
-          className="relative will-change-transform"
-          style={{
-            width: mapW,
-            height: mapH,
-            transform: `translate3d(${-panX}px, 0, 0)`,
-          }}
-        >
-          {children}
-        </div>
-      </div>
+  const showOverlayHint =
+    overflowHintPlacement === "overlay" && hasOverflow && overflowHintText
+  const showBelowHint =
+    overflowHintPlacement === "below" && hasOverflow && overflowHintText
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[6]">
-        <span className="sr-only">
-          Map orientation: the bottom edge of this floor plan is the library
-          entrance.
-        </span>
-        <div className="h-14 bg-gradient-to-t from-background/90 via-background/50 to-transparent" />
-        <div className="absolute inset-x-0 bottom-2 flex items-center justify-center px-3">
-          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-foreground px-3 py-1.5 text-background ring-1 ring-border/40 sm:gap-2.5 sm:px-3.5">
-            <span
-              className="flex shrink-0 items-center gap-0.5 rounded-full bg-background/10 px-2 py-1 ring-1 ring-background/10"
-              aria-hidden
-            >
-              <DoorOpen className="size-4 text-background sm:size-[1.125rem]" />
-              <ArrowUp className="size-3.5 text-background/90 sm:size-4" />
-            </span>
-            <span className="whitespace-nowrap text-[12px] font-semibold tracking-tight sm:text-sm">
-              Library entrance
-            </span>
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-2">
+      <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm">
+        <div
+          ref={viewportRef}
+          role="region"
+          aria-label={ariaLabel}
+          className={cn(
+            "min-w-0 w-full max-w-full cursor-grab overflow-hidden bg-muted/10",
+            panning && "cursor-grabbing select-none",
+            className
+          )}
+          style={{
+            height: mapH,
+            touchAction: "none",
+          }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          onWheel={onWheel}
+        >
+          <div
+            className="relative will-change-transform"
+            style={{
+              width: mapW,
+              height: mapH,
+              transform: `translate3d(${-panX}px, 0, 0)`,
+            }}
+          >
+            {children}
           </div>
         </div>
-      </div>
 
-      <div
-        className="pointer-events-none absolute inset-0 rounded-xl"
-        aria-hidden
-      >
-        {edges.left ? (
-          <div className="absolute inset-y-0 left-0 z-[1] w-10 bg-gradient-to-r from-background/95 via-background/45 to-transparent" />
-        ) : null}
-        {edges.right ? (
-          <div className="absolute inset-y-0 right-0 z-[1] w-10 bg-gradient-to-l from-background/95 via-background/45 to-transparent" />
-        ) : null}
-      </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[6]">
+          <span className="sr-only">
+            Map orientation: the bottom edge of this floor plan is the library
+            entrance.
+          </span>
+          <div className="h-14 bg-gradient-to-t from-background/90 via-background/50 to-transparent" />
+          <div className="absolute inset-x-0 bottom-2 flex items-center justify-center px-3">
+            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-foreground px-3 py-1.5 text-background ring-1 ring-border/40 sm:gap-2.5 sm:px-3.5">
+              <span
+                className="flex shrink-0 items-center gap-0.5 rounded-full bg-background/10 px-2 py-1 ring-1 ring-background/10"
+                aria-hidden
+              >
+                <DoorOpen className="size-4 text-background sm:size-[1.125rem]" />
+                <ArrowUp className="size-3.5 text-background/90 sm:size-4" />
+              </span>
+              <span className="whitespace-nowrap text-[12px] font-semibold tracking-tight sm:text-sm">
+                Library entrance
+              </span>
+            </div>
+          </div>
+        </div>
 
-      {hasOverflow ? (
         <div
-          className="pointer-events-none absolute right-2 top-2 z-[2] flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md border border-border/80 bg-background/95 px-2 py-1 text-[10px] font-medium leading-tight text-muted-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:right-3 sm:top-3 sm:max-w-none sm:text-xs"
+          className="pointer-events-none absolute inset-0 rounded-xl"
+          aria-hidden
+        >
+          {edges.left ? (
+            <div className="absolute inset-y-0 left-0 z-[1] w-10 bg-gradient-to-r from-background/95 via-background/45 to-transparent" />
+          ) : null}
+          {edges.right ? (
+            <div className="absolute inset-y-0 right-0 z-[1] w-10 bg-gradient-to-l from-background/95 via-background/45 to-transparent" />
+          ) : null}
+        </div>
+
+        {showOverlayHint ? (
+          <div
+            className="pointer-events-none absolute right-2 top-2 z-[2] flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-md border border-border/80 bg-background/95 px-2 py-1 text-[10px] font-medium leading-tight text-muted-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:right-3 sm:top-3 sm:max-w-none sm:text-xs"
+            role="status"
+          >
+            <ChevronsLeftRight className="size-3.5 shrink-0 opacity-80" aria-hidden />
+            <span>{overflowHintText}</span>
+          </div>
+        ) : null}
+      </div>
+
+      {showBelowHint ? (
+        <p
+          className="flex items-start gap-2 text-xs leading-snug text-muted-foreground"
           role="status"
         >
-          <ChevronsLeftRight className="size-3.5 shrink-0 opacity-80" aria-hidden />
+          <ChevronsLeftRight
+            className="mt-0.5 size-3.5 shrink-0 opacity-80"
+            aria-hidden
+          />
           <span>{overflowHintText}</span>
-        </div>
+        </p>
       ) : null}
     </div>
   )

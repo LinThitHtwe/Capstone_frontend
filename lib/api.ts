@@ -108,6 +108,11 @@ export function authHeaders(accessToken: string | null): HeadersInit {
   return { Authorization: `Bearer ${accessToken}` }
 }
 
+export type AdminTableLcdDisplayRef = {
+  id: number
+  lcd_type: string
+}
+
 export type AdminTable = {
   id: number
   table_number: number
@@ -118,14 +123,32 @@ export type AdminTable = {
   is_reservable: boolean
   is_available: boolean
   weight_sensor_id: number | null
+  /** Read-only: seated per linked weight sensor; null if no sensor. */
+  sensor_seated?: boolean | null
+  /** Read-only: LCD row linked to this table (OneToOne from LCD side). */
+  lcd_display?: AdminTableLcdDisplayRef | null
+}
+
+/** Payload for create/update (no read-only server fields). */
+export type AdminTableUpsertBody = Omit<
+  AdminTable,
+  "id" | "sensor_seated" | "lcd_display"
+> & {
+  lcd_display_id: number | null
 }
 
 async function parseJson(res: Response): Promise<unknown> {
   return await res.json().catch(() => ({}))
 }
 
-/** Public library map (no auth). Same row shape as admin table without weight_sensor_id. */
-export type PublicTable = Omit<AdminTable, "weight_sensor_id">
+/**
+ * Public library map (no auth). Same row shape as admin table without weight_sensor_id,
+ * plus live seating from the linked weight sensor when present.
+ */
+export type PublicTable = Omit<AdminTable, "weight_sensor_id"> & {
+  /** From weight sensor when linked; null if no sensor (client may simulate demo). */
+  sensor_seated?: boolean | null
+}
 
 export async function apiPublicListTables(): Promise<PublicTable[]> {
   const res = await fetch(apiUrl("tables/"), { cache: "no-store" })
@@ -160,7 +183,7 @@ export async function apiAdminListTables(accessToken: string): Promise<AdminTabl
 
 export async function apiAdminCreateTable(
   accessToken: string,
-  body: Omit<AdminTable, "id">
+  body: AdminTableUpsertBody
 ): Promise<AdminTable> {
   const res = await fetch(apiUrl("admin/tables/"), {
     method: "POST",
@@ -175,7 +198,7 @@ export async function apiAdminCreateTable(
 export async function apiAdminUpdateTable(
   accessToken: string,
   id: number,
-  body: Omit<AdminTable, "id">
+  body: AdminTableUpsertBody
 ): Promise<AdminTable> {
   const res = await fetch(apiUrl(`admin/tables/${id}/`), {
     method: "PUT",
@@ -365,17 +388,90 @@ export async function apiAdminGetVisitor(
   return data as AdminStudent
 }
 
+export type AdminReservation = {
+  id: number
+  user_id: number
+  user_email: string
+  user_name: string
+  table_id: number
+  table_number: number
+  start_time: string
+  end_time: string
+  duration_minutes: number
+  is_available: boolean
+  otp: string
+  created_at: string
+  reminder_sent_at: string | null
+  overstay_alert_sent_at: string | null
+}
+
+export async function apiAdminListReservations(
+  accessToken: string,
+  params: {
+    page?: number
+    page_size?: number
+    search?: string
+    ordering?: string
+  } = {}
+): Promise<PaginatedResults<AdminReservation>> {
+  const sp = new URLSearchParams()
+  if (params.page != null) sp.set("page", String(params.page))
+  if (params.page_size != null) sp.set("page_size", String(params.page_size))
+  if (params.search) sp.set("search", params.search)
+  if (params.ordering) sp.set("ordering", params.ordering)
+  const q = sp.toString()
+  const path = q ? `admin/reservations/?${q}` : "admin/reservations/"
+  const res = await fetch(apiUrl(path), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PaginatedResults<AdminReservation>
+}
+
+export async function apiAdminGetReservation(
+  accessToken: string,
+  id: number
+): Promise<AdminReservation> {
+  const res = await fetch(apiUrl(`admin/reservations/${id}/`), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as AdminReservation
+}
+
+export type AdminWeightSensorAssignedTable = {
+  id: number
+  table_number: number
+  library_floor: number
+  /** More than one table points at this sensor (misconfiguration). */
+  also_linked_count?: number
+}
+
 export type AdminWeightSensor = {
   id: number
-  location: string
+  name: string
   last_reading_at: string | null
   is_available: boolean
+  /** Primary linked table (lowest table number), if any. */
+  assigned_table?: AdminWeightSensorAssignedTable | null
+}
+
+export type AdminLCDDisplayAssignedTable = {
+  id: number
+  table_number: number
+  library_floor: number
 }
 
 export type AdminLCDDisplay = {
   id: number
   lcd_type: string
   table_id: number | null
+  /** Denormalized from linked table (same as table_id). */
+  assigned_table?: AdminLCDDisplayAssignedTable | null
   recorded_at: string | null
   is_available: boolean
 }
@@ -394,7 +490,10 @@ export async function apiAdminListWeightSensors(
 
 export async function apiAdminCreateWeightSensor(
   accessToken: string,
-  body: Pick<AdminWeightSensor, "location" | "is_available">
+  body: Pick<AdminWeightSensor, "name"> & {
+    /** Assign this sensor to a table (clears other tables using this sensor). */
+    table_id?: number | null
+  }
 ): Promise<AdminWeightSensor> {
   const res = await fetch(apiUrl("admin/weight-sensors/"), {
     method: "POST",
@@ -409,10 +508,10 @@ export async function apiAdminCreateWeightSensor(
 export async function apiAdminUpdateWeightSensor(
   accessToken: string,
   id: number,
-  body: Pick<AdminWeightSensor, "location" | "is_available">
+  body: Partial<Pick<AdminWeightSensor, "name"> & { table_id?: number | null }>
 ): Promise<AdminWeightSensor> {
   const res = await fetch(apiUrl(`admin/weight-sensors/${id}/`), {
-    method: "PUT",
+    method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
     body: JSON.stringify(body),
   })
@@ -448,7 +547,9 @@ export async function apiAdminListLCDDisplays(
 
 export async function apiAdminCreateLCDDisplay(
   accessToken: string,
-  body: Pick<AdminLCDDisplay, "lcd_type" | "table_id" | "is_available">
+  body: Pick<AdminLCDDisplay, "lcd_type"> & {
+    table_id?: number | null
+  }
 ): Promise<AdminLCDDisplay> {
   const res = await fetch(apiUrl("admin/lcd-displays/"), {
     method: "POST",
@@ -463,10 +564,10 @@ export async function apiAdminCreateLCDDisplay(
 export async function apiAdminUpdateLCDDisplay(
   accessToken: string,
   id: number,
-  body: Pick<AdminLCDDisplay, "lcd_type" | "table_id" | "is_available">
+  body: Partial<Pick<AdminLCDDisplay, "lcd_type" | "table_id">>
 ): Promise<AdminLCDDisplay> {
   const res = await fetch(apiUrl(`admin/lcd-displays/${id}/`), {
-    method: "PUT",
+    method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
     body: JSON.stringify(body),
   })

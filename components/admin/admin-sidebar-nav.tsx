@@ -21,14 +21,15 @@ import { Separator } from "@/components/ui/separator"
 const nav = [
   { href: "/admin", label: "Home", icon: Home, exact: true },
   { href: "/admin/tables", label: "Tables map", icon: Map, exact: false },
-  { href: "/admin/weight-sensors", label: "Weight sensors", icon: Scale, exact: false },
-  { href: "/admin/lcd-displays", label: "LCD displays", icon: Monitor, exact: false },
   {
     href: "/admin/reservations",
     label: "Reservation history",
     icon: History,
     exact: false,
   },
+  { href: "/admin/weight-sensors", label: "Weight sensors", icon: Scale, exact: false },
+  { href: "/admin/lcd-displays", label: "LCD displays", icon: Monitor, exact: false },
+  
   { href: "/admin/students", label: "Students", icon: Users, exact: false },
   { href: "/admin/staff", label: "Staff", icon: UserCog, exact: false },
   {

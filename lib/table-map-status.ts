@@ -1,6 +1,6 @@
 import type { AdminTableRecord } from "@/lib/library-map"
 
-export type TableMapStatus = "free" | "reserved" | "occupied"
+export type TableMapStatus = "free" | "reserved" | "occupied" | "offline"
 
 /** Shape needed to colour the map (matches API + legacy mock rows). */
 export type MapReservationForStatus = {
@@ -12,13 +12,11 @@ export type MapReservationForStatus = {
 /** Upcoming reservation within this window counts as “reserved” on the map. */
 const UPCOMING_WINDOW_MS = 48 * 60 * 60 * 1000
 
-export function getTableMapStatus(
+function reservationStatus(
   table: AdminTableRecord,
   reservations: MapReservationForStatus[],
   now: Date
-): TableMapStatus {
-  if (!table.isAvailable) return "occupied"
-
+): "reserved" | null {
   const t = now.getTime()
   const forTable = reservations.filter((r) => r.tableNumber === table.tableNumber)
 
@@ -29,18 +27,40 @@ export function getTableMapStatus(
     if (t >= start && t < end) return "reserved"
     if (t < start && start - t <= UPCOMING_WINDOW_MS) return "reserved"
   }
+  return null
+}
+
+/**
+ * Library overview: booking state first, then weight / demo seating, then free.
+ * `sensorSeated` should be the resolved boolean from API or `resolveSensorSeated`.
+ */
+export function getTableMapStatus(
+  table: AdminTableRecord,
+  reservations: MapReservationForStatus[],
+  now: Date,
+  sensorSeated: boolean
+): TableMapStatus {
+  if (!table.isAvailable) return "offline"
+
+  if (reservationStatus(table, reservations, now) === "reserved") {
+    return "reserved"
+  }
+
+  if (sensorSeated) return "occupied"
 
   return "free"
 }
 
 export function tableMapStatusLabel(status: TableMapStatus): string {
   switch (status) {
+    case "offline":
+      return "Unavailable"
     case "occupied":
-      return "Occupied"
+      return "Seated"
     case "reserved":
       return "Reserved"
     case "free":
     default:
-      return "Free"
+      return "Open"
   }
 }

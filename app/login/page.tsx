@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -49,32 +48,26 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-background md:min-h-[calc(100vh-4rem)]">
-      <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-xl flex-col justify-center px-4 py-6 md:min-h-[calc(100vh-4rem)] md:px-8 md:py-8">
-        <Card className="shadow-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl tracking-tight">Log in</CardTitle>
-            <CardDescription>
-              Library accounts (student, lecturer, staff, visitor) stay on the
-              public site after sign-in; admin accounts go to the admin console.
-              A safe <code className="rounded bg-muted px-1 text-xs">?from=</code>{" "}
-              path is used when your role may open it.
-            </CardDescription>
+      <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-lg flex-col items-center justify-center px-4 py-6 md:min-h-[calc(100vh-4rem)] md:px-8 md:py-8">
+        <Card className="w-full max-w-md shadow-md">
+          <CardHeader className="space-y-1 pb-2 text-center">
+            <CardTitle className="text-2xl tracking-tight">Sign in</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col items-center px-6 pb-8 pt-2">
             <form
               onSubmit={handleLogin}
-              className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2"
+              className="flex w-full max-w-sm flex-col gap-8"
             >
               {error ? (
                 <div
                   role="alert"
-                  className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive sm:col-span-2"
+                  className="w-full rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive"
                 >
                   {error}
                 </div>
               ) : null}
 
-              <div className="space-y-2">
+              <div className="w-full space-y-2 text-left">
                 <Label htmlFor="login-email">Email</Label>
                 <Input
                   id="login-email"
@@ -87,35 +80,32 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="w-full space-y-2 text-left">
                 <Label htmlFor="login-password">Password</Label>
                 <Input
                   id="login-password"
                   type="password"
                   autoComplete="current-password"
-                  placeholder="••••••••"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  //minLength={8}
                   required
                 />
               </div>
 
-              <Button
-                type="submit"
-                className="w-full sm:col-span-2"
-                disabled={pending}
-              >
-                {pending ? "Signing in…" : "Log in"}
+              <Button type="submit" className="w-full" disabled={pending}>
+                {pending ? "Signing in…" : "Sign in"}
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            <p className="mt-10 w-full max-w-sm text-center text-sm text-muted-foreground">
               No account?{" "}
               <Link
                 href="/signup"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Sign up
+                Create account
               </Link>
             </p>
           </CardContent>

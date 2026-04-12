@@ -62,32 +62,31 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-background md:min-h-[calc(100vh-4rem)]">
-      <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-2xl flex-col justify-center px-4 py-6 md:min-h-[calc(100vh-4rem)] md:px-8 md:py-8">
-        <Card className="flex min-h-[32rem] flex-col shadow-md sm:min-h-[36rem] md:min-h-[38rem]">
-          <CardHeader className="shrink-0 space-y-1 pb-4">
+      <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-2xl flex-col items-center justify-center px-4 py-6 md:min-h-[calc(100vh-4rem)] md:px-8 md:py-8">
+        <Card className="w-full shadow-md">
+          <CardHeader className="space-y-1 pb-2 text-center">
             <CardTitle className="text-2xl tracking-tight">
               Create account
             </CardTitle>
-            <CardDescription>
-              Register for library access. Choose your role; admin accounts are
-              not created here.
+            <CardDescription className="text-balance">
+              Register for library reservation. Choose your role.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col pb-8 pt-0">
+          <CardContent className="flex flex-col items-center px-6 pb-8 pt-2">
             <form
               onSubmit={handleSignUp}
-              className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2"
+              className="grid w-full max-w-xl grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2"
             >
               {error ? (
                 <div
                   role="alert"
-                  className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive sm:col-span-2"
+                  className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive sm:col-span-2"
                 >
                   {error}
                 </div>
               ) : null}
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-left">
                 <Label htmlFor="signup-name">Full name</Label>
                 <Input
                   id="signup-name"
@@ -100,7 +99,7 @@ export default function SignUpPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-left">
                 <Label htmlFor="signup-role">Role</Label>
                 <select
                   id="signup-role"
@@ -118,7 +117,7 @@ export default function SignUpPage() {
                 </select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-left">
                 <Label htmlFor="signup-id">ID number</Label>
                 <Input
                   id="signup-id"
@@ -131,7 +130,7 @@ export default function SignUpPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-left">
                 <Label htmlFor="signup-email">Email</Label>
                 <Input
                   id="signup-email"
@@ -144,7 +143,7 @@ export default function SignUpPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-left">
                 <Label htmlFor="signup-password">Password</Label>
                 <Input
                   id="signup-password"
@@ -158,7 +157,7 @@ export default function SignUpPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-left">
                 <Label htmlFor="signup-confirm">Confirm password</Label>
                 <Input
                   id="signup-confirm"
@@ -181,7 +180,7 @@ export default function SignUpPage() {
               </Button>
             </form>
 
-            <p className="mt-auto pt-10 text-center text-sm text-muted-foreground">
+            <p className="mt-10 w-full max-w-xl text-center text-sm text-muted-foreground">
               Already have an account?{" "}
               <Link
                 href="/login"

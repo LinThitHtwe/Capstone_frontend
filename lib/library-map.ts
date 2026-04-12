@@ -15,6 +15,26 @@ export const libraryMapSize = { w: 900, h: 520 } as const
 export const libraryTileSize = { w: 72, h: 52 } as const
 export const libraryFloors = [1, 2] as const
 
+/**
+ * Public map: cap strip width to the artboard (see `libraryMapSize.w`); keep Tailwind
+ * `900px` here in sync when the artboard width changes.
+ */
+export const LIBRARY_MAP_PUBLIC_VIEWPORT_WRAP_CLASSNAME =
+  "mx-auto w-full min-w-0 max-w-[min(100%,900px)]"
+
+/**
+ * Admin preview (single main column): width as if the sidebar were always expanded
+ * (15rem) plus shell padding, so toggling collapse does not resize the map.
+ */
+export const LIBRARY_MAP_ADMIN_HOME_VIEWPORT_WRAP_CLASSNAME =
+  "mx-auto w-full min-w-0 max-w-full lg:max-w-[min(100%,calc(100dvw-15rem-5.5rem))]"
+
+/**
+ * Admin tables editor (map + details rail): same idea, including the details column (~16rem).
+ */
+export const LIBRARY_MAP_ADMIN_TABLES_VIEWPORT_WRAP_CLASSNAME =
+  "mx-auto w-full min-w-0 max-w-full lg:max-w-[min(100%,calc(100dvw-15rem-16rem-6rem))]"
+
 export function tableTypeLabel(type: string): string {
   switch (type) {
     case "SINGLE":

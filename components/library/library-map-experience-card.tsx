@@ -8,9 +8,12 @@ import { Circle, Square, Users } from "lucide-react"
 import { LibraryMapPannableViewport } from "@/components/library/library-map-pannable-viewport"
 import {
   LibraryMapLegendPillFree,
+  LibraryMapLegendPillFreeNoBooking,
+  LibraryMapLegendPillOffline,
   LibraryMapLegendPillOccupied,
   LibraryMapLegendPillReserved,
   LibraryMapTableTileFree,
+  LibraryMapTableTileOffline,
   LibraryMapTableTileOccupied,
   LibraryMapTableTileReserved,
 } from "@/components/library/library-map-table-by-status"
@@ -31,6 +34,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  LIBRARY_MAP_ADMIN_HOME_VIEWPORT_WRAP_CLASSNAME,
+  LIBRARY_MAP_PUBLIC_VIEWPORT_WRAP_CLASSNAME,
   LIBRARY_MAP_STORAGE_KEY,
   LIBRARY_MAP_UPDATE_EVENT,
   libraryFloors,
@@ -44,6 +49,7 @@ import {
   type PublicTable,
   type PublicMapReservation,
 } from "@/lib/api"
+import { resolveSensorSeated } from "@/lib/library-map-sensor-demo"
 import {
   getTableMapStatus,
   tableMapStatusLabel,
@@ -67,6 +73,10 @@ function mapPublicTableToRecord(t: PublicTable): AdminTableRecord {
     positionY: t.position_y,
     isReservable: t.is_reservable,
     isAvailable: t.is_available,
+    sensorSeatedFromApi:
+      typeof t.sensor_seated === "boolean" || t.sensor_seated === null
+        ? t.sensor_seated
+        : null,
   }
 }
 
@@ -162,8 +172,15 @@ export function LibraryMapExperienceCard({
 
   const availableByType = React.useMemo(() => {
     const c = { SINGLE: 0, CIRCULAR: 0, FOUR_SEATS: 0 }
+    const tms = now.getTime()
     for (const t of visibleTables) {
-      if (getTableMapStatus(t, mapReservations, now) !== "free") continue
+      const seated = resolveSensorSeated(
+        t.sensorSeatedFromApi ?? null,
+        t.tableNumber,
+        t.libraryFloor,
+        tms
+      )
+      if (getTableMapStatus(t, mapReservations, now, seated) !== "free") continue
       if (t.tableType === "CIRCULAR") c.CIRCULAR += 1
       else if (t.tableType === "FOUR_SEATS") c.FOUR_SEATS += 1
       else c.SINGLE += 1
@@ -191,13 +208,18 @@ export function LibraryMapExperienceCard({
   const cardDescription =
     description ??
     (variant === "admin"
-      ? "Same live colours and layout as the public page. Edit positions under Tables."
-      : "Pick a floor to see tables on that level.")
+      ? "Same overview as students see: reservations, weight-based seating (demo when no sensor), and walk-in tables."
+      : "Live overview: who has a booking, who is seated (weight — demo pattern until sensors are linked), and open seats.")
 
   const mapAria =
     variant === "public"
-      ? `Library map floor ${floor}. Green tables are free to reserve. Drag empty areas horizontally to pan.`
+      ? `Library map floor ${floor}. Open seats, reserved bookings, and seated tables from weight sensors. Drag empty areas horizontally to pan.`
       : `Library map floor ${floor}. Read-only preview. Drag empty areas horizontally to pan.`
+
+  const mapViewportWrapClassName =
+    variant === "public"
+      ? LIBRARY_MAP_PUBLIC_VIEWPORT_WRAP_CLASSNAME
+      : LIBRARY_MAP_ADMIN_HOME_VIEWPORT_WRAP_CLASSNAME
 
   if (!hydrated || !initialLoadDone) {
     return (
@@ -369,29 +391,54 @@ export function LibraryMapExperienceCard({
               <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                 <LibraryMapLegendPillFree />
+                <LibraryMapLegendPillFreeNoBooking />
                 <LibraryMapLegendPillReserved />
                 <LibraryMapLegendPillOccupied />
+                <LibraryMapLegendPillOffline />
               </div>
             </div>
 
             <div className="h-px bg-border" aria-hidden />
           </div>
 
-          <LibraryMapPannableViewport aria-label={mapAria}>
+          <div className={mapViewportWrapClassName}>
+          <LibraryMapPannableViewport
+            aria-label={mapAria}
+            overflowHintPlacement="below"
+            overflowHintText={
+              variant === "public"
+                ? "Scroll or drag sideways to pan the map"
+                : "Scroll or drag sideways to pan"
+            }
+          >
             {visibleTables.map((t) => {
-              const status = getTableMapStatus(t, mapReservations, now)
+              const seated = resolveSensorSeated(
+                t.sensorSeatedFromApi ?? null,
+                t.tableNumber,
+                t.libraryFloor,
+                now.getTime()
+              )
+              const status = getTableMapStatus(t, mapReservations, now, seated)
               const positionStyle: React.CSSProperties = {
                 left: t.positionX,
                 top: t.positionY,
                 width: libraryTileSize.w,
                 height: libraryTileSize.h,
               }
+              const titleSuffix =
+                (status === "free" && !t.isReservable
+                  ? " · not reservable online"
+                  : "") +
+                (status === "occupied" && t.sensorSeatedFromApi == null
+                  ? " · demo seating"
+                  : "")
               const tileProps = {
                 tableNumber: t.tableNumber,
                 tableType: t.tableType,
                 typeLabel: tableTypeLabel(t.tableType),
                 positionStyle,
-                title: `${tableMapStatusLabel(status)} · ${tableTypeLabel(t.tableType)}`,
+                title: `${tableMapStatusLabel(status)} · ${tableTypeLabel(t.tableType)}${titleSuffix}`,
+                isReservable: t.isReservable,
               }
               switch (status) {
                 case "free":
@@ -400,7 +447,7 @@ export function LibraryMapExperienceCard({
                       key={t.id}
                       {...tileProps}
                       onActivate={
-                        allowReserve
+                        allowReserve && t.isReservable
                           ? () => setReservePromptTable(t.tableNumber)
                           : undefined
                       }
@@ -412,14 +459,27 @@ export function LibraryMapExperienceCard({
                   )
                 case "occupied":
                   return (
-                    <LibraryMapTableTileOccupied key={t.id} {...tileProps} />
+                    <LibraryMapTableTileOccupied
+                      key={t.id}
+                      {...tileProps}
+                      occupancyDemo={t.sensorSeatedFromApi == null}
+                    />
+                  )
+                case "offline":
+                  return (
+                    <LibraryMapTableTileOffline key={t.id} {...tileProps} />
                   )
               }
             })}
           </LibraryMapPannableViewport>
+          </div>
           <p className="mt-2 text-xs text-muted-foreground">
             {allowReserve ? (
-              "Green tables are free — tap or click to reserve."
+              <>
+                Emerald: open and reservable (tap to book). Dashed slate: open walk-in
+                only. Amber: reserved. Rose: seated (weight sensor, or a rotating demo if
+                no sensor is linked). Grey: unavailable.
+              </>
             ) : (
               <>
                 Preview only — scroll or drag sideways on the map. Same view as the public

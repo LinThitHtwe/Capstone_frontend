@@ -7,7 +7,18 @@ export type AdminTableRecord = {
   positionX: number
   positionY: number
   isReservable: boolean
+  /** Table row in service (false = off / maintenance on the map). */
   isAvailable: boolean
+  /**
+   * From public API when a weight sensor is linked; null/undefined = unknown → demo seating.
+   */
+  sensorSeatedFromApi?: boolean | null
+  /** Linked weight sensor (admin editor + API); null = none. */
+  weightSensorId?: number | null
+  /** Linked LCD display row (admin editor + API); null = none. */
+  lcdDisplayId?: number | null
+  /** From API when an LCD is linked (for labels). */
+  lcdDisplayType?: string | null
 }
 
 const types = ["SINGLE", "CIRCULAR", "FOUR_SEATS"] as const
@@ -60,7 +71,9 @@ function buildDefaultAdminTables(): AdminTableRecord[] {
         positionX,
         positionY,
         isReservable: (i + floor) % 4 !== 0,
-        isAvailable: (i + floor * 2) % 5 !== 0,
+        isAvailable: (i + floor + n) % 13 !== 0,
+        weightSensorId: null,
+        lcdDisplayId: null,
       })
       n += 1
     })
