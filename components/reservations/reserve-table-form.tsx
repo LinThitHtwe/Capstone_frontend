@@ -18,6 +18,7 @@ import {
   apiMeCreateReservation,
   apiMeListReservations,
   apiPublicListTables,
+  apiPublicTableWeightAvailability,
   type PublicTable,
   type UserReservation,
 } from "@/lib/api"
@@ -64,6 +65,9 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
   const [submitting, setSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [successId, setSuccessId] = React.useState<number | null>(null)
+  /** ST1 + linked weight sensor: live “current booking ends at” from API (OLED uses same). */
+  const [st1WeightEndsLocal, setSt1WeightEndsLocal] = React.useState<string | null>(null)
+  const [st1WeightAvailError, setSt1WeightAvailError] = React.useState<string | null>(null)
 
   const selectedTable = React.useMemo(() => {
     if (initialTableNumber == null || !tables) return null
@@ -73,6 +77,41 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
       ) ?? null
     )
   }, [initialTableNumber, tables])
+
+  const showSt1WeightAvailability =
+    selectedTable != null &&
+    selectedTable.table_number === 1 &&
+    selectedTable.sensor_seated != null
+
+  React.useEffect(() => {
+    if (!showSt1WeightAvailability) {
+      setSt1WeightEndsLocal(null)
+      setSt1WeightAvailError(null)
+      return
+    }
+    let cancelled = false
+    const load = async () => {
+      try {
+        const a = await apiPublicTableWeightAvailability(1)
+        if (cancelled) return
+        setSt1WeightAvailError(null)
+        setSt1WeightEndsLocal(a.current_booking_ends_local)
+      } catch (e) {
+        if (!cancelled) {
+          setSt1WeightEndsLocal(null)
+          setSt1WeightAvailError(
+            e instanceof Error ? e.message : "Could not load table availability."
+          )
+        }
+      }
+    }
+    void load()
+    const id = window.setInterval(() => void load(), 45_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [showSt1WeightAvailability])
 
   React.useEffect(() => {
     let cancelled = false
@@ -155,6 +194,18 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
       setSuccessId(created.id)
       const list = await apiMeListReservations(accessToken)
       setMyReservations(list)
+      if (
+        selectedTable.table_number === 1 &&
+        selectedTable.sensor_seated != null
+      ) {
+        try {
+          const a = await apiPublicTableWeightAvailability(1)
+          setSt1WeightEndsLocal(a.current_booking_ends_local)
+          setSt1WeightAvailError(null)
+        } catch {
+          /* keep prior hint */
+        }
+      }
       router.refresh()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Booking failed.")
@@ -265,6 +316,32 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
             <span className="font-medium text-foreground">4 hours</span> of active
             bookings per calendar day in that timezone.
           </p>
+
+          {showSt1WeightAvailability ? (
+            <div
+              className="rounded-lg border border-border/80 bg-muted/30 px-3 py-2 text-sm"
+              role="status"
+            >
+              <p className="font-medium text-foreground">Table ST1 (weight sensor)</p>
+              {st1WeightAvailError ? (
+                <p className="mt-1 text-destructive">{st1WeightAvailError}</p>
+              ) : st1WeightEndsLocal ? (
+                <p className="mt-1 text-muted-foreground">
+                  If someone is seated under a booking right now, that slot ends at{" "}
+                  <span className="font-mono font-semibold text-foreground">
+                    {st1WeightEndsLocal}
+                  </span>{" "}
+                  ({LIBRARY_TIMEZONE}). The display at the table uses the same value.
+                </p>
+              ) : (
+                <p className="mt-1 text-muted-foreground">
+                  No reservation is active on this table at the moment (library clock). If
+                  the table still shows occupied, it may be walk-in seating without a
+                  booking end time.
+                </p>
+              )}
+            </div>
+          ) : null}
 
           <div className="grid gap-2">
             <Label htmlFor="reservation-date">Date</Label>

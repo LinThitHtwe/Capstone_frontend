@@ -36,8 +36,11 @@ function reservationStatus(
 }
 
 /**
- * Library overview: booking state first, then weight / demo seating, then free.
- * `sensorSeated` should be the resolved boolean from API or `resolveSensorSeated`.
+ * Map colour follows ``Table.status`` from Django (IoT POST + admin): 1=free, 2=occupied,
+ * 3=reserved. When status is **free**, we do not infer reserved/occupied from bookings or
+ * the weight sensor so the public map matches firmware LEDs.
+ *
+ * `sensorSeated` / reservations are only used if ``status`` is missing or not 1/2/3.
  */
 export function getTableMapStatus(
   table: AdminTableRecord,
@@ -50,6 +53,7 @@ export function getTableMapStatus(
   const persisted = table.status ?? TABLE_STATUS_FREE
   if (persisted === TABLE_STATUS_OCCUPIED) return "occupied"
   if (persisted === TABLE_STATUS_RESERVED) return "reserved"
+  if (persisted === TABLE_STATUS_FREE) return "free"
 
   if (reservationStatus(table, reservations, now) === "reserved") {
     return "reserved"

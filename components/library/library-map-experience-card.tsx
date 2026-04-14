@@ -63,6 +63,17 @@ const SEATS_PER_TABLE_TYPE = {
   FOUR_SEATS: 4,
 } as const
 
+/**
+ * How often to refetch public tables + reservations from Django.
+ * IoT updates ``Table.status`` via POST; the map only sees it after the next fetch.
+ * Override with ``NEXT_PUBLIC_LIBRARY_MAP_POLL_MS`` (milliseconds, min 800).
+ */
+const LIBRARY_MAP_API_POLL_MS = (() => {
+  const n = Number(process.env.NEXT_PUBLIC_LIBRARY_MAP_POLL_MS)
+  if (Number.isFinite(n) && n >= 300) return n
+  return 2_000
+})()
+
 function mapPublicTableToRecord(t: PublicTable): AdminTableRecord {
   return {
     id: String(t.id),
@@ -149,7 +160,7 @@ export function LibraryMapExperienceCard({
   }, [loadFromApi])
 
   React.useEffect(() => {
-    const id = window.setInterval(() => void loadFromApi(), 45_000)
+    const id = window.setInterval(() => void loadFromApi(), LIBRARY_MAP_API_POLL_MS)
     return () => window.clearInterval(id)
   }, [loadFromApi])
 

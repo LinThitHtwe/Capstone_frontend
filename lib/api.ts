@@ -178,6 +178,26 @@ export async function apiPublicMapReservations(): Promise<PublicMapReservation[]
   return data as PublicMapReservation[]
 }
 
+/** Live end time of the reservation active *now* on a weight-sensor table (e.g. ST1). */
+export type PublicTableWeightAvailability = {
+  table_number: number
+  has_weight_sensor: boolean
+  current_booking_ends_at: string | null
+  current_booking_ends_local: string | null
+}
+
+export async function apiPublicTableWeightAvailability(
+  tableNumber: number
+): Promise<PublicTableWeightAvailability> {
+  const res = await fetch(
+    apiUrl(`public/tables/${tableNumber}/weight-availability/`),
+    { cache: "no-store" }
+  )
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as PublicTableWeightAvailability
+}
+
 export type UserReservation = {
   id: number
   table_id: number

@@ -1,9 +1,9 @@
 "use client"
 
-import * as React from "react"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
+import { HomeReservationHistoryPreview } from "@/components/library/home-reservation-history-preview"
 import { LibraryMapExperienceCard } from "@/components/library/library-map-experience-card"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,22 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getDemoStudentReservationsSorted } from "@/lib/data/demo-user-reservations"
-
-const reservationFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
-
-function formatReservationRange(start: string, end: string) {
-  return `${reservationFormatter.format(new Date(start))} → ${reservationFormatter.format(new Date(end))}`
-}
 
 export function PublicLibraryMap() {
-  const reservationPreview = React.useMemo(() => {
-    return getDemoStudentReservationsSorted().slice(0, 3)
-  }, [])
-
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-background md:min-h-[calc(100vh-4rem)]">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8">
@@ -52,26 +38,7 @@ export function PublicLibraryMap() {
             </Button>
           </CardHeader>
           <CardContent>
-            {reservationPreview.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No reservations yet.</p>
-            ) : (
-              <ul className="divide-y rounded-xl border bg-card">
-                {reservationPreview.map((r) => (
-                  <li
-                    key={r.id}
-                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
-                  >
-                    <div className="font-medium tabular-nums">Table #{r.tableNumber}</div>
-                    <div className="text-muted-foreground">
-                      {formatReservationRange(r.startTime, r.endTime)}
-                    </div>
-                    <div className="w-full text-xs text-muted-foreground sm:w-auto">
-                      {r.durationMinutes} min
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <HomeReservationHistoryPreview />
           </CardContent>
         </Card>
       </main>
