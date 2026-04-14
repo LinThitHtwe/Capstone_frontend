@@ -120,6 +120,7 @@ function loadTables(): AdminTableRecord[] {
     if (!Array.isArray(parsed)) return defaultAdminTables
     return parsed.map((t) => ({
       ...t,
+      status: t.status ?? 1,
       weightSensorId: t.weightSensorId ?? null,
       lcdDisplayId: t.lcdDisplayId ?? null,
       lcdDisplayType: t.lcdDisplayType ?? null,
@@ -177,6 +178,7 @@ function createTable(
     positionY: y,
     isReservable: true,
     isAvailable: true,
+    status: 1,
     weightSensorId: null,
     lcdDisplayId: null,
   }
@@ -196,6 +198,7 @@ function mapAdminApiTableToRecord(t: AdminTable): AdminTableRecord {
     positionY: t.position_y,
     isReservable: t.is_reservable,
     isAvailable: t.is_available,
+    status: t.status ?? 1,
     sensorSeatedFromApi: t.sensor_seated ?? null,
     weightSensorId: t.weight_sensor_id ?? null,
     lcdDisplayId: t.lcd_display?.id ?? null,
@@ -496,6 +499,7 @@ export default function AdminTablesPage() {
           position_y: t.positionY,
           is_reservable: t.isReservable,
           is_available: t.isAvailable,
+          status: t.status ?? 1,
           weight_sensor_id: t.weightSensorId ?? null,
           lcd_display_id: t.lcdDisplayId ?? null,
         }

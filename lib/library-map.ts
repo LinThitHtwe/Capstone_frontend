@@ -55,7 +55,7 @@ export function loadLibraryTablesFromLocalStorage(): AdminTableRecord[] {
     if (!raw) return defaultAdminTables
     const parsed = JSON.parse(raw) as AdminTableRecord[]
     if (!Array.isArray(parsed)) return defaultAdminTables
-    return parsed
+    return parsed.map((t) => ({ ...t, status: t.status ?? 1 }))
   } catch {
     return defaultAdminTables
   }

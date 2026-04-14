@@ -113,6 +113,11 @@ export type AdminTableLcdDisplayRef = {
   lcd_type: string
 }
 
+/** Matches backend ``api.constants`` — ``Table.status``. */
+export const TABLE_STATUS_FREE = 1
+export const TABLE_STATUS_OCCUPIED = 2
+export const TABLE_STATUS_RESERVED = 3
+
 export type AdminTable = {
   id: number
   table_number: number
@@ -122,6 +127,8 @@ export type AdminTable = {
   position_y: number
   is_reservable: boolean
   is_available: boolean
+  /** 1=free, 2=occupied, 3=reserved (see ``TABLE_STATUS_*``). */
+  status: number
   weight_sensor_id: number | null
   /** Read-only: seated per linked weight sensor; null if no sensor. */
   sensor_seated?: boolean | null
@@ -169,6 +176,47 @@ export async function apiPublicMapReservations(): Promise<PublicMapReservation[]
   const data = await parseJson(res)
   if (!res.ok) throw new Error(formatErrorPayload(data))
   return data as PublicMapReservation[]
+}
+
+export type UserReservation = {
+  id: number
+  table_id: number
+  table_number: number
+  start_time: string
+  end_time: string
+  duration_minutes: number
+  created_at: string
+}
+
+export type UserReservationCreateBody = {
+  table_id: number
+  reservation_date: string
+  start_local: string
+  end_local: string
+}
+
+export async function apiMeListReservations(accessToken: string): Promise<UserReservation[]> {
+  const res = await fetch(apiUrl("me/reservations/"), {
+    headers: { ...authHeaders(accessToken) },
+    cache: "no-store",
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as UserReservation[]
+}
+
+export async function apiMeCreateReservation(
+  accessToken: string,
+  body: UserReservationCreateBody
+): Promise<UserReservation> {
+  const res = await fetch(apiUrl("me/reservations/"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(accessToken) },
+    body: JSON.stringify(body),
+  })
+  const data = await parseJson(res)
+  if (!res.ok) throw new Error(formatErrorPayload(data))
+  return data as UserReservation
 }
 
 export async function apiAdminListTables(accessToken: string): Promise<AdminTable[]> {

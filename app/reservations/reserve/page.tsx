@@ -1,14 +1,6 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { ReserveTableForm } from "@/components/reservations/reserve-table-form"
 
 export const metadata: Metadata = {
   title: "Reserve a table",
@@ -36,55 +28,12 @@ export default function ReserveTablePage({ searchParams }: PageProps) {
             Reserve a table
           </h1>
           <p className="text-sm text-muted-foreground">
-            Confirm details and submit your booking (demo — form coming soon).
+            Pick a date and time in 30-minute slots (9:00–18:00, library time). Up
+            to 4 hours per day per account.
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Table</CardTitle>
-            <CardDescription>
-              Selected from the map. Adjust the URL query{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                ?table=
-              </code>{" "}
-              if needed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {tableNumber == null ? (
-              <p className="text-sm text-muted-foreground">
-                No table was selected. Open the{" "}
-                <Link href="/" className="font-medium text-foreground underline">
-                  library map
-                </Link>
-                , click a free (green) table, and confirm in the dialog.
-              </p>
-            ) : (
-              <>
-                <p className="text-lg">
-                  You are reserving{" "}
-                  <span className="font-semibold tabular-nums">
-                    table no. {tableNumber}
-                  </span>
-                  .
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Date, time, and confirmation will be added here when the
-                  booking API is wired up.
-                </p>
-              </>
-            )}
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Button type="button" disabled>
-                Submit reservation
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/">Back to map</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <ReserveTableForm initialTableNumber={tableNumber} />
       </main>
     </div>
   )

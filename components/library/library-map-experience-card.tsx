@@ -73,6 +73,7 @@ function mapPublicTableToRecord(t: PublicTable): AdminTableRecord {
     positionY: t.position_y,
     isReservable: t.is_reservable,
     isAvailable: t.is_available,
+    status: t.status ?? 1,
     sensorSeatedFromApi:
       typeof t.sensor_seated === "boolean" || t.sensor_seated === null
         ? t.sensor_seated

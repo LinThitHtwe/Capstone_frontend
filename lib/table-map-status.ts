@@ -1,3 +1,8 @@
+import {
+  TABLE_STATUS_FREE,
+  TABLE_STATUS_OCCUPIED,
+  TABLE_STATUS_RESERVED,
+} from "@/lib/api"
 import type { AdminTableRecord } from "@/lib/library-map"
 
 export type TableMapStatus = "free" | "reserved" | "occupied" | "offline"
@@ -41,6 +46,10 @@ export function getTableMapStatus(
   sensorSeated: boolean
 ): TableMapStatus {
   if (!table.isAvailable) return "offline"
+
+  const persisted = table.status ?? TABLE_STATUS_FREE
+  if (persisted === TABLE_STATUS_OCCUPIED) return "occupied"
+  if (persisted === TABLE_STATUS_RESERVED) return "reserved"
 
   if (reservationStatus(table, reservations, now) === "reserved") {
     return "reserved"

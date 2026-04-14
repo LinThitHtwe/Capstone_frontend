@@ -9,6 +9,8 @@ export type AdminTableRecord = {
   isReservable: boolean
   /** Table row in service (false = off / maintenance on the map). */
   isAvailable: boolean
+  /** Matches API ``Table.status``: 1=free, 2=occupied, 3=reserved. */
+  status: number
   /**
    * From public API when a weight sensor is linked; null/undefined = unknown → demo seating.
    */
@@ -72,6 +74,7 @@ function buildDefaultAdminTables(): AdminTableRecord[] {
         positionY,
         isReservable: (i + floor) % 4 !== 0,
         isAvailable: (i + floor + n) % 13 !== 0,
+        status: 1,
         weightSensorId: null,
         lcdDisplayId: null,
       })

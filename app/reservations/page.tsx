@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { MyReservationsClient } from "@/components/reservations/my-reservations-client"
 import {
   Card,
   CardContent,
@@ -6,33 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { getDemoStudentReservationsSorted } from "@/lib/data/demo-user-reservations"
 
 export const metadata: Metadata = {
   title: "My reservations",
   description: "Your reservation history",
 }
 
-const formatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
-
-function formatRange(start: string, end: string) {
-  return `${formatter.format(new Date(start))} → ${formatter.format(new Date(end))}`
-}
-
 export default function StudentReservationsPage() {
-  const sorted = getDemoStudentReservationsSorted()
-
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-background md:min-h-[calc(100vh-4rem)]">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8">
@@ -47,48 +28,8 @@ export default function StudentReservationsPage() {
             <CardTitle>All reservations</CardTitle>
             <CardDescription>Newest first.</CardDescription>
           </CardHeader>
-          <CardContent className="p-0 sm:p-0">
-            <div className="rounded-xl border bg-card shadow-sm">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Table</TableHead>
-                    <TableHead>Schedule</TableHead>
-                    <TableHead className="text-right">Duration</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sorted.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="text-center text-muted-foreground"
-                      >
-                        No reservations yet.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sorted.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {r.id}
-                        </TableCell>
-                        <TableCell className="font-medium tabular-nums">
-                          #{r.tableNumber}
-                        </TableCell>
-                        <TableCell className="max-w-[240px] text-muted-foreground">
-                          {formatRange(r.startTime, r.endTime)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {r.durationMinutes}m
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <CardContent className="space-y-4 p-4 sm:p-6">
+            <MyReservationsClient />
           </CardContent>
         </Card>
       </main>
