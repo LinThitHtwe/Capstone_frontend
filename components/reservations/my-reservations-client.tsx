@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 
+import { ReservationAttendanceBadge } from "@/components/admin/reservation-attendance-badge"
 import { useAuth } from "@/components/auth/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -95,10 +96,7 @@ export function MyReservationsClient() {
   const sorted =
     rows == null
       ? []
-      : [...rows].sort(
-          (a, b) =>
-            new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-        )
+      : [...rows].sort((a, b) => a.id - b.id)
 
   return (
     <>
@@ -116,9 +114,9 @@ export function MyReservationsClient() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
               <TableHead>Table</TableHead>
               <TableHead>Schedule</TableHead>
+              <TableHead className="text-right">Status</TableHead>
               <TableHead className="text-right">Duration</TableHead>
             </TableRow>
           </TableHeader>
@@ -144,14 +142,14 @@ export function MyReservationsClient() {
             ) : (
               sorted.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {r.id}
-                  </TableCell>
                   <TableCell className="font-medium tabular-nums">
                     #{r.table_number}
                   </TableCell>
                   <TableCell className="max-w-[260px] text-muted-foreground">
                     {formatRange(r.start_time, r.end_time)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <ReservationAttendanceBadge status={r.status} />
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {r.duration_minutes}m

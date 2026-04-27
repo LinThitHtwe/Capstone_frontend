@@ -1,3 +1,5 @@
+import type { AdminReservation, ReservationAttendanceStatus } from "@/lib/api"
+
 import type { ReservationRecord, StudentRecord } from "./admin-mock"
 
 export type RoleCountPoint = {
@@ -6,7 +8,7 @@ export type RoleCountPoint = {
 }
 
 export type AvailabilityCountPoint = {
-  availability: "available" | "unavailable"
+  status: ReservationAttendanceStatus
   label: string
   count: number
   fill: string
@@ -19,12 +21,13 @@ export type DayCountPoint = {
   count: number
 }
 
-const AVAILABILITY_META: Record<
-  AvailabilityCountPoint["availability"],
+const STATUS_META: Record<
+  ReservationAttendanceStatus,
   { label: string; fillVar: string }
 > = {
-  available: { label: "Available", fillVar: "hsl(var(--chart-1))" },
-  unavailable: { label: "Unavailable", fillVar: "hsl(var(--chart-3))" },
+  pending: { label: "pending", fillVar: "hsl(var(--chart-4))" },
+  arrived: { label: "arrived", fillVar: "hsl(var(--chart-2))" },
+  noshow: { label: "noshow", fillVar: "hsl(var(--chart-3))" },
 }
 
 export function buildStudentsByRole(students: StudentRecord[]): RoleCountPoint[] {
@@ -38,26 +41,46 @@ export function buildStudentsByRole(students: StudentRecord[]): RoleCountPoint[]
   }))
 }
 
-export function buildReservationsByAvailability(
-  reservations: ReservationRecord[]
-): AvailabilityCountPoint[] {
-  const order: AvailabilityCountPoint["availability"][] = [
-    "available",
-    "unavailable",
+/** Counts from admin directory list endpoints (students+members, staff, lecturers, visitors). */
+export function buildUsersByRoleFromDirectory(
+  studentsCount: number,
+  staffCount: number,
+  lecturersCount: number,
+  visitorsCount: number
+): RoleCountPoint[] {
+  return [
+    { role: "Student", count: studentsCount },
+    { role: "Staff", count: staffCount },
+    { role: "Lecturer", count: lecturersCount },
+    { role: "Visitor", count: visitorsCount },
   ]
-  const map = new Map<AvailabilityCountPoint["availability"], number>()
+}
+
+type ReservationForAvailability = { status: ReservationAttendanceStatus }
+type ReservationForDay = ReservationRecord | AdminReservation
+
+function chartStartDayKey(r: ReservationForDay): string {
+  if ("start_time" in r) {
+    return r.start_time.slice(0, 10)
+  }
+  return r.startTime.slice(0, 10)
+}
+
+export function buildReservationsByAvailability(
+  reservations: ReservationForAvailability[]
+): AvailabilityCountPoint[] {
+  const order: ReservationAttendanceStatus[] = ["pending", "arrived", "noshow"]
+  const map = new Map<ReservationAttendanceStatus, number>()
   for (const a of order) map.set(a, 0)
   for (const r of reservations) {
-    const key: AvailabilityCountPoint["availability"] = r.isAvailable
-      ? "available"
-      : "unavailable"
+    const key = r.status
     map.set(key, (map.get(key) ?? 0) + 1)
   }
-  return order.map((availability) => ({
-    availability,
-    label: AVAILABILITY_META[availability].label,
-    count: map.get(availability) ?? 0,
-    fill: AVAILABILITY_META[availability].fillVar,
+  return order.map((status) => ({
+    status,
+    label: STATUS_META[status].label,
+    count: map.get(status) ?? 0,
+    fill: STATUS_META[status].fillVar,
   }))
 }
 
@@ -67,11 +90,11 @@ const dayFormatter = new Intl.DateTimeFormat(undefined, {
 })
 
 export function buildReservationsByDay(
-  reservations: ReservationRecord[]
+  reservations: ReservationForDay[]
 ): DayCountPoint[] {
   const map = new Map<string, number>()
   for (const r of reservations) {
-    const day = r.startTime.slice(0, 10)
+    const day = chartStartDayKey(r)
     map.set(day, (map.get(day) ?? 0) + 1)
   }
   return Array.from(map.entries())

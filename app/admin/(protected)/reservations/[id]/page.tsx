@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { ReservationAttendanceBadge } from "@/components/admin/reservation-attendance-badge"
 import { apiAdminGetReservation, type AdminReservation } from "@/lib/api"
 
 function Field({
@@ -136,8 +137,8 @@ export default function AdminReservationDetailsPage() {
                 value={<span className="font-mono text-xs">{r.id}</span>}
               />
               <Field
-                label="Active"
-                value={r.is_available ? "Yes" : "No"}
+                label="Status"
+                value={<ReservationAttendanceBadge status={r.status} />}
               />
               <Field
                 label="Start time"
@@ -160,6 +161,10 @@ export default function AdminReservationDetailsPage() {
                     "—"
                   )
                 }
+              />
+              <Field
+                label="OTP verified at"
+                value={formatMaybe(r.otp_verified_at)}
               />
               <Field
                 label="Created at"

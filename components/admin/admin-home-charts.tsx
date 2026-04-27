@@ -6,6 +6,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   LabelList,
   Pie,
   PieChart,
@@ -47,16 +48,16 @@ const timelineChartConfig = {
 } satisfies ChartConfig
 
 const statusChartConfig = {
-  confirmed: {
-    label: "Confirmed",
-    color: "hsl(var(--chart-1))",
+  pending: {
+    label: "pending",
+    color: "hsl(var(--chart-4))",
   },
-  completed: {
-    label: "Completed",
+  arrived: {
+    label: "arrived",
     color: "hsl(var(--chart-2))",
   },
-  cancelled: {
-    label: "Cancelled",
+  noshow: {
+    label: "noshow",
     color: "hsl(var(--chart-3))",
   },
 } satisfies ChartConfig
@@ -80,7 +81,7 @@ export function AdminHomeCharts({
         <CardHeader>
           <CardTitle>Users by role</CardTitle>
           <CardDescription>
-            Headcount grouped by role (sample data).
+            Headcount from the student, staff, lecturer, and visitor directories.
           </CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
@@ -122,8 +123,10 @@ export function AdminHomeCharts({
 
       <Card>
         <CardHeader>
-          <CardTitle>Reservation availability</CardTitle>
-          <CardDescription>Share of records by availability flag.</CardDescription>
+          <CardTitle>Reservation status</CardTitle>
+          <CardDescription>
+            Share of records: pending, arrived, or noshow.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex min-h-[280px] flex-col items-center justify-center pb-4">
           {pieData.length === 0 ? (
@@ -138,18 +141,21 @@ export function AdminHomeCharts({
                   content={
                     <ChartTooltipContent
                       hideLabel
-                      nameKey="availability"
+                      nameKey="status"
                     />
                   }
                 />
                 <Pie
                   data={pieData}
                   dataKey="count"
-                  nameKey="availability"
+                  nameKey="status"
                   innerRadius={56}
                   strokeWidth={2}
                   stroke="hsl(var(--background))"
                 >
+                  {pieData.map((entry) => (
+                    <Cell key={`slice-${entry.status}`} fill={entry.fill} />
+                  ))}
                   <LabelList
                     dataKey="count"
                     stroke="none"

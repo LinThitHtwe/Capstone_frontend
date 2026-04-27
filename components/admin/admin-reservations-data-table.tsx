@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ReservationAttendanceBadge } from "@/components/admin/reservation-attendance-badge"
 import {
   apiAdminListReservations,
   type AdminReservation,
@@ -33,7 +34,6 @@ type SortField =
   | "end_time"
   | "duration_minutes"
   | "created_at"
-  | "is_available"
 
 function nextOrdering(current: string, field: SortField): string {
   if (current === field) return `-${field}`
@@ -42,8 +42,7 @@ function nextOrdering(current: string, field: SortField): string {
     field === "start_time" ||
     field === "end_time" ||
     field === "created_at" ||
-    field === "id" ||
-    field === "is_available"
+    field === "id"
   ) {
     return `-${field}`
   }
@@ -204,11 +203,7 @@ export function AdminReservationsDataTable() {
                 </div>
               </TableHead>
               <TableHead>{sortButton("created_at", "Created")}</TableHead>
-              <TableHead className="text-right">
-                <div className="flex justify-end">
-                  {sortButton("is_available", "Active")}
-                </div>
-              </TableHead>
+              <TableHead className="text-right">Status</TableHead>
               <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -257,7 +252,7 @@ export function AdminReservationsDataTable() {
                     {dt.format(new Date(r.created_at))}
                   </TableCell>
                   <TableCell className="text-right">
-                    {r.is_available ? "Yes" : "No"}
+                    <ReservationAttendanceBadge status={r.status} />
                   </TableCell>
                   <TableCell className="text-right">
                     <Button asChild variant="outline" size="sm">

@@ -203,12 +203,16 @@ export async function apiPublicTableWeightAvailability(
   return data as PublicTableWeightAvailability
 }
 
+/** Derived attendance for user + admin reservation APIs (not a separate DB column). */
+export type ReservationAttendanceStatus = "pending" | "arrived" | "noshow"
+
 export type UserReservation = {
   id: number
   table_id: number
   table_number: number
   start_time: string
   end_time: string
+  status: ReservationAttendanceStatus
   duration_minutes: number
   created_at: string
 }
@@ -471,8 +475,9 @@ export type AdminReservation = {
   start_time: string
   end_time: string
   duration_minutes: number
-  is_available: boolean
+  status: ReservationAttendanceStatus
   otp: string
+  otp_verified_at: string | null
   created_at: string
   reminder_sent_at: string | null
   overstay_alert_sent_at: string | null
@@ -501,6 +506,29 @@ export async function apiAdminListReservations(
   const data = await parseJson(res)
   if (!res.ok) throw new Error(formatErrorPayload(data))
   return data as PaginatedResults<AdminReservation>
+}
+
+const ADMIN_LIST_MAX_PAGE = 100
+
+/**
+ * Fetches all admin reservations (paginated) for dashboards and exports.
+ * Uses page_size {@link ADMIN_LIST_MAX_PAGE} until the API returns no `next` page.
+ */
+export async function apiAdminListAllReservations(
+  accessToken: string,
+  params: { ordering?: string } = {}
+): Promise<AdminReservation[]> {
+  const all: AdminReservation[] = []
+  for (let page = 1; ; page += 1) {
+    const data = await apiAdminListReservations(accessToken, {
+      page,
+      page_size: ADMIN_LIST_MAX_PAGE,
+      ordering: params.ordering ?? "start_time",
+    })
+    all.push(...data.results)
+    if (!data.next) break
+  }
+  return all
 }
 
 export async function apiAdminGetReservation(

@@ -1,3 +1,5 @@
+import type { ReservationAttendanceStatus } from "@/lib/api"
+
 export type StudentRecord = {
   id: string
   name: string
@@ -18,7 +20,7 @@ export type ReservationRecord = {
   durationMinutes: number
   otp: string
   createdAt: string
-  isAvailable: boolean
+  status: ReservationAttendanceStatus
 }
 
 /** Placeholder data until the backend is connected. */
@@ -103,71 +105,71 @@ export const mockReservations: ReservationRecord[] = [
     userName: "Aisha Rahman",
     userEmail: "aisha.r@student.edu",
     tableNumber: 12,
-    startTime: "2026-04-02T09:00:00",
-    endTime: "2026-04-02T11:00:00",
+    startTime: "2026-04-24T09:00:00",
+    endTime: "2026-04-24T11:00:00",
     durationMinutes: 120,
     otp: "482913",
-    createdAt: "2026-04-02T08:59:20",
-    isAvailable: true,
+    createdAt: "2026-04-24T08:52:00",
+    status: "noshow",
   },
   {
     id: "res-102",
     userName: "Marcus Chen",
     userEmail: "marcus.c@student.edu",
     tableNumber: 5,
-    startTime: "2026-04-01T14:00:00",
-    endTime: "2026-04-01T15:30:00",
+    startTime: "2026-04-23T14:00:00",
+    endTime: "2026-04-23T15:30:00",
     durationMinutes: 90,
     otp: "915204",
-    createdAt: "2026-04-01T13:58:02",
-    isAvailable: true,
+    createdAt: "2026-04-23T13:55:00",
+    status: "noshow",
   },
   {
     id: "res-103",
     userName: "Sofia Martins",
     userEmail: "sofia.m@student.edu",
     tableNumber: 20,
-    startTime: "2026-04-03T10:00:00",
-    endTime: "2026-04-03T16:00:00",
+    startTime: "2026-04-26T10:00:00",
+    endTime: "2026-04-26T16:00:00",
     durationMinutes: 360,
     otp: "113809",
-    createdAt: "2026-04-03T09:59:41",
-    isAvailable: true,
+    createdAt: "2026-04-26T09:58:00",
+    status: "pending",
   },
   {
     id: "res-104",
     userName: "James Okafor",
     userEmail: "james.o@student.edu",
     tableNumber: 8,
-    startTime: "2026-03-28T13:00:00",
-    endTime: "2026-03-28T17:00:00",
+    startTime: "2026-04-22T13:00:00",
+    endTime: "2026-04-22T17:00:00",
     durationMinutes: 240,
     otp: "000000",
-    createdAt: "2026-03-28T12:58:10",
-    isAvailable: false,
+    createdAt: "2026-04-22T12:56:00",
+    status: "noshow",
   },
   {
     id: "res-105",
     userName: "Aisha Rahman",
     userEmail: "aisha.r@student.edu",
     tableNumber: 1,
-    startTime: "2026-04-07T13:00:00",
-    endTime: "2026-04-07T15:00:00",
+    startTime: "2026-04-26T13:00:00",
+    endTime: "2026-04-26T15:00:00",
     durationMinutes: 120,
     otp: "221100",
-    createdAt: "2026-04-07T12:55:00",
-    isAvailable: true,
+    createdAt: "2026-04-26T12:50:00",
+    status: "pending",
   },
   {
     id: "res-106",
     userName: "Marcus Chen",
     userEmail: "marcus.c@student.edu",
     tableNumber: 12,
-    startTime: "2026-04-07T18:00:00",
-    endTime: "2026-04-07T19:30:00",
+    startTime: "2026-04-26T14:00:00",
+    endTime: "2026-04-26T15:30:00",
     durationMinutes: 90,
     otp: "334455",
-    createdAt: "2026-04-07T09:00:00",
-    isAvailable: true,
+    createdAt: "2026-04-26T13:48:00",
+    status: "arrived",
   },
 ]
