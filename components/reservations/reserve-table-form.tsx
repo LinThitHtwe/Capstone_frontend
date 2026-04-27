@@ -71,9 +71,14 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
   const [endLocal, setEndLocal] = React.useState("10:00");
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [successId, setSuccessId] = React.useState<number | null>(null);
   /** ST1 + linked weight sensor: live “current booking ends at” from API (OLED uses same). */
   const [st1WeightEndsLocal, setSt1WeightEndsLocal] = React.useState<
+    string | null
+  >(null);
+  const [st1WeightWindowStart, setSt1WeightWindowStart] = React.useState<
+    string | null
+  >(null);
+  const [st1WeightWindowEnd, setSt1WeightWindowEnd] = React.useState<
     string | null
   >(null);
   const [st1WeightAvailError, setSt1WeightAvailError] = React.useState<
@@ -97,6 +102,8 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
   React.useEffect(() => {
     if (!showSt1WeightAvailability) {
       setSt1WeightEndsLocal(null);
+      setSt1WeightWindowStart(null);
+      setSt1WeightWindowEnd(null);
       setSt1WeightAvailError(null);
       return;
     }
@@ -107,6 +114,8 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
         if (cancelled) return;
         setSt1WeightAvailError(null);
         setSt1WeightEndsLocal(a.current_booking_ends_local);
+        setSt1WeightWindowStart(a.current_booking_starts_local);
+        setSt1WeightWindowEnd(a.current_booking_window_end_local);
       } catch (e) {
         if (!cancelled) {
           setSt1WeightEndsLocal(null);
@@ -189,7 +198,6 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setSuccessId(null);
     if (!accessToken || !selectedTable) return;
     if (newDuration <= 0) {
       setFormError("End time must be after start time.");
@@ -203,28 +211,13 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
     }
     setSubmitting(true);
     try {
-      const created = await apiMeCreateReservation(accessToken, {
+      await apiMeCreateReservation(accessToken, {
         table_id: selectedTable.id,
         reservation_date: reservationDate,
         start_local: startLocal,
         end_local: endLocal,
       });
-      setSuccessId(created.id);
-      const list = await apiMeListReservations(accessToken);
-      setMyReservations(list);
-      if (
-        selectedTable.table_number === 1 &&
-        selectedTable.sensor_seated != null
-      ) {
-        try {
-          const a = await apiPublicTableWeightAvailability(1);
-          setSt1WeightEndsLocal(a.current_booking_ends_local);
-          setSt1WeightAvailError(null);
-        } catch {
-          /* keep prior hint */
-        }
-      }
-      router.refresh();
+      router.push("/reservations");
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Booking failed.");
     } finally {
@@ -367,10 +360,29 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
                 </p>
                 {st1WeightAvailError ? (
                   <p className="mt-1 text-destructive">{st1WeightAvailError}</p>
+                ) : st1WeightWindowStart && st1WeightWindowEnd ? (
+                  <p className="mt-1 text-muted-foreground">
+                    Next or current booking window on ST1:{" "}
+                    <span className="font-mono font-semibold text-foreground">
+                      {st1WeightWindowStart}–{st1WeightWindowEnd}
+                    </span>{" "}
+                    ({LIBRARY_TIMEZONE}). Place an item on the table to confirm,
+                    then enter the OTP emailed to you on the table keypad.
+                    {st1WeightEndsLocal ? (
+                      <>
+                        {" "}
+                        If a session is active now, it ends at{" "}
+                        <span className="font-mono font-semibold text-foreground">
+                          {st1WeightEndsLocal}
+                        </span>
+                        .
+                      </>
+                    ) : null}
+                  </p>
                 ) : st1WeightEndsLocal ? (
                   <p className="mt-1 text-muted-foreground">
-                    If someone is seated under a booking right now, that slot
-                    ends at{" "}
+                    If the table is occupied under a booking right now, that
+                    slot ends at{" "}
                     <span className="font-mono font-semibold text-foreground">
                       {st1WeightEndsLocal}
                     </span>{" "}
@@ -465,19 +477,6 @@ export function ReserveTableForm({ initialTableNumber }: Props) {
             {formError ? (
               <p className="text-sm text-destructive" role="alert">
                 {formError}
-              </p>
-            ) : null}
-            {successId != null ? (
-              <p
-                className="text-sm text-green-700 dark:text-green-400"
-                role="status"
-              >
-                Reservation #{successId} created. Check your email for your
-                verification code. See{" "}
-                <Link href="/reservations" className="underline">
-                  My reservations
-                </Link>
-                .
               </p>
             ) : null}
 

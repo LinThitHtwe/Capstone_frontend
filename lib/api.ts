@@ -178,12 +178,17 @@ export async function apiPublicMapReservations(): Promise<PublicMapReservation[]
   return data as PublicMapReservation[]
 }
 
-/** Live end time of the reservation active *now* on a weight-sensor table (e.g. ST1). */
+/** Weight-sensor table: booking window + OTP state for map, reserve page, and IoT OLED. */
 export type PublicTableWeightAvailability = {
   table_number: number
   has_weight_sensor: boolean
   current_booking_ends_at: string | null
   current_booking_ends_local: string | null
+  /** HH:MM start of the next/current booking (``end_time`` > now), if any. */
+  current_booking_starts_local: string | null
+  /** HH:MM end of that booking window. */
+  current_booking_window_end_local: string | null
+  otp_verified: boolean
 }
 
 export async function apiPublicTableWeightAvailability(
