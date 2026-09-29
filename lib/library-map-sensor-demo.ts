@@ -1,6 +1,6 @@
 /**
- * When a table has no weight sensor yet, the map still shows a believable “seated” demo
- * so the overview matches the intended product behaviour until hardware is connected.
+ * When a table has no linked weight sensor, seating is simulated so the map still
+ * shows occupied vs free patterns for tables without hardware.
  */
 export function resolveSensorSeated(
   fromApi: boolean | null | undefined,

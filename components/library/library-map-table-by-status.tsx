@@ -198,11 +198,11 @@ export function LibraryMapTableTileReserved({
 }
 
 export type LibraryMapTableTileOccupiedProps = LibraryMapTableTileProps & {
-  /** When no sensor is linked, seating is simulated for the demo. */
+  /** When no sensor is linked, seating is simulated for map preview. */
   occupancyDemo?: boolean
 }
 
-/** Someone seated (weight sensor); demo when no hardware yet. */
+/** Occupied / seated table tile (from weight sensor, or simulated). */
 export function LibraryMapTableTileOccupied({
   tableNumber,
   tableType,
@@ -226,7 +226,7 @@ export function LibraryMapTableTileOccupied({
         tableType={tableType}
         typeLabel={typeLabel}
         subtextClassName="text-rose-950/95 dark:text-rose-50/95"
-        statusLine={occupancyDemo ? "Seated · demo" : "Seated"}
+        statusLine={occupancyDemo ? "Seated · simulated" : "Seated"}
         statusIcon={Armchair}
       />
     </div>

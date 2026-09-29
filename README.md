@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Capstone Frontend
 
-## Getting Started
+Next.js web app for the **Smart Library Table Reservation & IoT Monitoring** Capstone. Provides the public library map, user sign-up / sign-in, table reservation flow, personal reservation history, and the admin console (tables, users, reservations, weight sensors, LCD displays).
 
-First, run the development server:
+## Documentation
+
+Screenshots, hardware photos, and system walkthrough:
+
+**https://github.com/LinThitHtwe/Capstone_documentation**
+
+Related repos:
+
+- Backend: https://github.com/LinThitHtwe/Capstone_backend
+- IoT firmware: https://github.com/LinThitHtwe/Capstone_Iot
+
+## Prerequisites
+
+- Node.js 18+ (LTS recommended)
+- Running backend API (see Capstone_backend), typically on `http://127.0.0.1:8001`
+
+## Getting started
 
 ```bash
+git clone https://github.com/LinThitHtwe/Capstone_frontend.git
+cd Capstone_frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### API URL
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+By default the browser uses the Next.js rewrite `/django-api/*` → `http://127.0.0.1:8001/api/*` (see `next.config.mjs`).
 
-## Learn More
+Optional override:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# .env.local (gitignored)
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8001/api
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+| Command        | Description              |
+| -------------- | ------------------------ |
+| `npm run dev`  | Development server       |
+| `npm run build`| Production build         |
+| `npm run start`| Serve production build   |
+| `npm run lint` | ESLint                   |
 
-## Deploy on Vercel
+## Roles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- **Student / lecturer / visitor** — public map, reserve tables, view own history
+- **Admin** — console under `/admin` for maps, directories, reservations, and IoT devices

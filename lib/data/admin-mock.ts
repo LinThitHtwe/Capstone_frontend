@@ -23,7 +23,7 @@ export type ReservationRecord = {
   status: ReservationAttendanceStatus
 }
 
-/** Placeholder data until the backend is connected. */
+/** Sample records used for admin chart / occupancy demos when live aggregates are unavailable. */
 export const mockStudents: StudentRecord[] = [
   {
     id: "stu-001",

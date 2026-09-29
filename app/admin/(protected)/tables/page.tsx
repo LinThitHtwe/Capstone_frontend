@@ -211,7 +211,7 @@ export default function AdminTablesPage() {
   const [tables, setTables] = React.useState<AdminTableRecord[]>([])
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
   const [floor, setFloor] = React.useState<(typeof floors)[number]>(1)
-  /** JSON snapshot of last persisted state (localStorage now; replace with API success later). */
+  /** JSON snapshot of last saved state (used for dirty checks and reset). */
   const [savedRevision, setSavedRevision] = React.useState("")
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState("")
@@ -629,9 +629,10 @@ export default function AdminTablesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tables</h1>
           <p className="text-muted-foreground">
-            Demo minimap editor. Drag to reposition, select to edit, add/remove
-            tables. Click <span className="font-medium text-foreground">Save</span>{" "}
-            to persist (browser storage for now; wire to your API later).
+            Library minimap editor. Drag to reposition, select to edit, and
+            add or remove tables. Click{" "}
+            <span className="font-medium text-foreground">Save</span> to
+            persist layout and table settings to the API.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

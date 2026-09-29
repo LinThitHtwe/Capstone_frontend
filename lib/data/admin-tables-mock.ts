@@ -1,5 +1,5 @@
 export type AdminTableRecord = {
-  /** Internal id for demo state management */
+  /** Client row id (backend numeric id as string when loaded from API). */
   id: string
   tableNumber: number
   tableType: string

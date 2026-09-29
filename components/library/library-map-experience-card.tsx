@@ -220,8 +220,8 @@ export function LibraryMapExperienceCard({
   const cardDescription =
     description ??
     (variant === "admin"
-      ? "Same overview as students see: reservations, weight-based seating (demo when no sensor), and walk-in tables."
-      : "Live overview: who has a booking, who is seated (weight — demo pattern until sensors are linked), and open seats.")
+      ? "Same overview as students see: reservations, weight-based seating (simulated when no sensor), and walk-in tables."
+      : "Live overview: who has a booking, who is seated (weight sensor, or simulated when none is linked), and open seats.")
 
   const mapAria =
     variant === "public"
@@ -489,7 +489,7 @@ export function LibraryMapExperienceCard({
             {allowReserve ? (
               <>
                 Emerald: open and reservable (tap to book). Dashed slate: open walk-in
-                only. Amber: reserved. Rose: seated (weight sensor, or a rotating demo if
+                only. Amber: reserved. Rose: seated (weight sensor, or simulated if
                 no sensor is linked). Grey: unavailable.
               </>
             ) : (
